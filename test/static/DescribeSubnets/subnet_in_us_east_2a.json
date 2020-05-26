@@ -1,0 +1,24 @@
+{
+    "NextToken": null,
+    "Subnets": [
+        {
+            "AssignIpv6AddressOnCreation": false,
+            "AvailabilityZone": "us-east-2a",
+            "AvailabilityZoneId": "use2-az1",
+            "AvailableIpAddressCount": 4091,
+            "CidrBlock": "172.31.0.0/20",
+            "CustomerOwnedIpv4Pool": null,
+            "DefaultForAz": true,
+            "Ipv6CidrBlockAssociationSet": null,
+            "MapCustomerOwnedIpOnLaunch": null,
+            "MapPublicIpOnLaunch": true,
+            "OutpostArn": null,
+            "OwnerId": "424940966892",
+            "State": "available",
+            "SubnetArn": "arn:aws:ec2:us-east-2:424940966892:subnet/subnet-80ce00eb",
+            "SubnetId": "subnet-80ce00eb",
+            "Tags": null,
+            "VpcId": "vpc-3513b45e"
+        }
+    ]
+}

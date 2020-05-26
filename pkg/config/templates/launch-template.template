@@ -1,0 +1,26 @@
+{
+  "Resources": {
+    "launchTemplate$idx": {
+      "Type": "AWS::EC2::LaunchTemplate",
+      "Properties": {
+        "LaunchTemplateData": {
+          "ImageId": "$amiId",
+          "InstanceType": "$instanceType",
+          "SecurityGroupIds": [
+            {
+              "Ref": "securityGroup"
+            }
+          ],
+          "IamInstanceProfile": {
+            "Name": {
+              "Ref": "instanceProfile"
+            }
+          },
+          "UserData": {
+            "Fn::Base64": "$userData"
+          }
+        }
+      }
+    }
+  }
+}

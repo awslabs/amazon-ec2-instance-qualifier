@@ -1,0 +1,33 @@
+#! /usr/bin/env bash
+
+set -euo pipefail
+
+function test() {
+  cmd=$1
+  instance_types=$2
+  test_type=$3
+  golden_file=$4
+  output_file="$OUTPUT_DIR"/"$test_type".tmp
+
+  $cmd <<< $'y\n0' >$output_file 2>&1
+
+  result=$(cat $output_file)
+  verify_result "$instance_types" "$result" $golden_file $test_type
+  delete_bucket "$(grep -m 1 -o -E "qualifier-bucket-.{15}" $output_file)"
+  is_resources_deleted "$result" $test_type
+}
+
+
+test "$AEIQ_BIN --instance-types=$SUPPORTED_INSTANCE_TYPES --test-suite=${TEST_SUITE}_no_optional_flags --target-utilization=99" "$SUPPORTED_INSTANCE_TYPES" "no_optional_flags" "target_util_99.golden" & pids+=($!)
+sleep 1
+test "$AEIQ_BIN --instance-types=$ALL_INSTANCE_TYPES --test-suite=${TEST_SUITE}_timeout_with_unsupported_instance_types --target-utilization=80 --subnet=$SUBNET_ID --timeout=125" "$ALL_INSTANCE_TYPES" "timeout_with_unsupported_instance_types" "target_util_80_timeout.golden" & pids+=($!)
+sleep 1
+test "$AEIQ_BIN --instance-types=$SUPPORTED_INSTANCE_TYPES --test-suite=${TEST_SUITE}_short_timeout --target-utilization=30 --vpc=$VPC_ID --subnet=$SUBNET_ID --timeout=5" "$SUPPORTED_INSTANCE_TYPES" "short_timeout" "target_util_30_short_timeout.golden" & pids+=($!)
+sleep 1
+test "$AEIQ_BIN --instance-types=$SUPPORTED_INSTANCE_TYPES --test-suite=${TEST_SUITE}_non_default_region --target-utilization=50 --region=$NON_DEFAULT_REGION --vpc=$VPC_IN_NON_DEFAULT_REGION" "$SUPPORTED_INSTANCE_TYPES" "non_default_region" "target_util_50.golden" & pids+=($!)
+
+for pid in "${pids[@]}"; do
+  wait $pid
+done
+
+exit $EXIT_CODE_TO_RETURN

@@ -1,0 +1,66 @@
+{
+    "InstanceTypes": [
+        {
+            "AutoRecoverySupported": true,
+            "BareMetal": false,
+            "BurstablePerformanceSupported": false,
+            "CurrentGeneration": true,
+            "DedicatedHostsSupported": true,
+            "EbsInfo": {
+                "EbsOptimizedSupport": "default",
+                "EncryptionSupport": "supported"
+            },
+            "FpgaInfo": null,
+            "FreeTierEligible": false,
+            "GpuInfo": null,
+            "HibernationSupported": false,
+            "Hypervisor": "nitro",
+            "InferenceAcceleratorInfo": null,
+            "InstanceStorageInfo": null,
+            "InstanceStorageSupported": false,
+            "InstanceType": "a1.large",
+            "MemoryInfo": {
+                "SizeInMiB": 4096
+            },
+            "NetworkInfo": {
+                "EnaSupport": "required",
+                "Ipv4AddressesPerInterface": 10,
+                "Ipv6AddressesPerInterface": 10,
+                "Ipv6Supported": true,
+                "MaximumNetworkInterfaces": 3,
+                "NetworkPerformance": "Up to 10 Gigabit"
+            },
+            "PlacementGroupInfo": {
+                "SupportedStrategies": [
+                    "cluster",
+                    "partition",
+                    "spread"
+                ]
+            },
+            "ProcessorInfo": {
+                "SupportedArchitectures": [
+                    "arm64"
+                ],
+                "SustainedClockSpeedInGhz": 2.3
+            },
+            "SupportedRootDeviceTypes": [
+                "ebs"
+            ],
+            "SupportedUsageClasses": [
+                "on-demand"
+            ],
+            "VCpuInfo": {
+                "DefaultCores": 2,
+                "DefaultThreadsPerCore": 1,
+                "DefaultVCpus": 2,
+                "ValidCores": [
+                    2
+                ],
+                "ValidThreadsPerCore": [
+                    1
+                ]
+            }
+        }
+    ],
+    "NextToken": null
+}

@@ -1,0 +1,317 @@
+{
+  "Description": "AWS CloudFormation template used to create and manage resources of EC2-instance-qualifier.",
+  "Parameters": {
+    "providedVpc": {
+      "Description": "VPC ID provided by the user.",
+      "Default": "NONE",
+      "Type": "String"
+    },
+    "providedSubnet": {
+      "Description": "Subnet ID provided by the user.",
+      "Default": "NONE",
+      "Type": "String"
+    }
+  },
+  "Conditions": {
+    "createNewVpcInfrastructure": {
+      "Fn::Equals": [
+        {
+          "Ref": "providedVpc"
+        },
+        "NONE"
+      ]
+    }
+  },
+  "Resources": {
+    "vpc": {
+      "Type": "AWS::EC2::VPC",
+      "Condition": "createNewVpcInfrastructure",
+      "Properties": {
+        "CidrBlock": "10.0.0.0/24"
+      }
+    },
+    "internetGateway": {
+      "Type": "AWS::EC2::InternetGateway",
+      "Condition": "createNewVpcInfrastructure",
+      "Properties": {}
+    },
+    "vpcGatewayAttachment": {
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "Condition": "createNewVpcInfrastructure",
+      "Properties": {
+        "VpcId": {
+          "Ref": "vpc"
+        },
+        "InternetGatewayId": {
+          "Ref": "internetGateway"
+        }
+      }
+    },
+    "subnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Condition": "createNewVpcInfrastructure",
+      "Properties": {
+        "CidrBlock": "10.0.0.0/24",
+        "VpcId": {
+          "Ref": "vpc"
+        },
+        "AvailabilityZone": "us-east-2a",
+        "MapPublicIpOnLaunch": true
+      }
+    },
+    "routeTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Condition": "createNewVpcInfrastructure",
+      "Properties": {
+        "VpcId": {
+          "Ref": "vpc"
+        }
+      }
+    },
+    "route": {
+      "Type": "AWS::EC2::Route",
+      "Condition": "createNewVpcInfrastructure",
+      "DependsOn": "vpcGatewayAttachment",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "routeTable"
+        },
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": {
+          "Ref": "internetGateway"
+        }
+      }
+    },
+    "subnetRouteTableAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Condition": "createNewVpcInfrastructure",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "subnet"
+        },
+        "RouteTableId": {
+          "Ref": "routeTable"
+        }
+      }
+    },
+    "securityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Security group used by instance-qualifier.",
+        "VpcId": {
+          "Fn::If": [
+            "createNewVpcInfrastructure",
+            {
+              "Ref": "vpc"
+            },
+            {
+              "Ref": "providedVpc"
+            }
+          ]
+        }
+      }
+    },
+    "securityGroupIngress": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "securityGroup"
+        },
+        "IpProtocol": "-1",
+        "SourceSecurityGroupId": {
+          "Ref": "securityGroup"
+        }
+      }
+    },
+    "role": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "ec2.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "MaxSessionDuration": 43200,
+        "Policies": [
+          {
+            "PolicyName": "AmazonS3FullAccess",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": "s3:*",
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "instanceProfile": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {
+        "Roles": [
+          {
+            "Ref": "role"
+          }
+        ]
+      }
+    },
+    "launchTemplate0": {
+      "Type": "AWS::EC2::LaunchTemplate",
+      "Properties": {
+        "LaunchTemplateData": {
+          "ImageId": "",
+          "InstanceType": "m4.large",
+          "SecurityGroupIds": [
+            {
+              "Ref": "securityGroup"
+            }
+          ],
+          "IamInstanceProfile": {
+            "Name": {
+              "Ref": "instanceProfile"
+            }
+          },
+          "UserData": {
+            "Fn::Base64": "#!/usr/bin/env bash\naws s3 cp s3://ec2-instance-qualifier-app/ec2-instance-qualifier-app .\nchmod u+x ec2-instance-qualifier-app\n./ec2-instance-qualifier-app >/dev/null 2>/dev/null &\n\nINSTANCE_TYPE=m4.large\nVCPUS_NUM=2\nMEM_SIZE=8192\nOS_VERSION=Linux/UNIX\nARCHITECTURE=x86_64\nBUCKET=\nTIMEOUT=0\nBUCKET_ROOT_DIR=\nTARGET_UTIL=0\n\nadduser qualifier\ncd /home/qualifier\nmkdir instance-qualifier\ncd instance-qualifier\naws s3 cp s3:///. .\ntar -xvf .\ncd .\nfor file in *; do\n\tif [[ -f \"$file\" ]]; then\n\t\tchmod u+x \"$file\"\n\tfi\ndone\ncd ../..\nchown -R qualifier instance-qualifier\nchmod u+s /sbin/shutdown\nsudo -i -u qualifier bash << EOF\ncd instance-qualifier/.\n./agent \"$INSTANCE_TYPE\" \"$VCPUS_NUM\" \"$MEM_SIZE\" \"$OS_VERSION\" \"$ARCHITECTURE\" \"$BUCKET\" \"$TIMEOUT\" \"$BUCKET_ROOT_DIR\" \"$TARGET_UTIL\" > m4.large.log 2>&1 &\nEOF\n"
+          }
+        }
+      }
+    },
+    "launchTemplate1": {
+      "Type": "AWS::EC2::LaunchTemplate",
+      "Properties": {
+        "LaunchTemplateData": {
+          "ImageId": "",
+          "InstanceType": "m4.xlarge",
+          "SecurityGroupIds": [
+            {
+              "Ref": "securityGroup"
+            }
+          ],
+          "IamInstanceProfile": {
+            "Name": {
+              "Ref": "instanceProfile"
+            }
+          },
+          "UserData": {
+            "Fn::Base64": "#!/usr/bin/env bash\naws s3 cp s3://ec2-instance-qualifier-app/ec2-instance-qualifier-app .\nchmod u+x ec2-instance-qualifier-app\n./ec2-instance-qualifier-app >/dev/null 2>/dev/null &\n\nINSTANCE_TYPE=m4.xlarge\nVCPUS_NUM=4\nMEM_SIZE=16384\nOS_VERSION=Linux/UNIX\nARCHITECTURE=x86_64\nBUCKET=\nTIMEOUT=0\nBUCKET_ROOT_DIR=\nTARGET_UTIL=0\n\nadduser qualifier\ncd /home/qualifier\nmkdir instance-qualifier\ncd instance-qualifier\naws s3 cp s3:///. .\ntar -xvf .\ncd .\nfor file in *; do\n\tif [[ -f \"$file\" ]]; then\n\t\tchmod u+x \"$file\"\n\tfi\ndone\ncd ../..\nchown -R qualifier instance-qualifier\nchmod u+s /sbin/shutdown\nsudo -i -u qualifier bash << EOF\ncd instance-qualifier/.\n./agent \"$INSTANCE_TYPE\" \"$VCPUS_NUM\" \"$MEM_SIZE\" \"$OS_VERSION\" \"$ARCHITECTURE\" \"$BUCKET\" \"$TIMEOUT\" \"$BUCKET_ROOT_DIR\" \"$TARGET_UTIL\" > m4.xlarge.log 2>&1 &\nEOF\n"
+          }
+        }
+      }
+    },
+    "autoScalingGroup": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "Properties": {
+        "LaunchTemplate": {
+          "LaunchTemplateId": {
+            "Ref": "launchTemplate0"
+          },
+          "Version": {
+            "Fn::GetAtt": [
+              "launchTemplate0",
+              "LatestVersionNumber"
+            ]
+          }
+        },
+        "MaxSize": "2",
+        "MinSize": "0",
+        "VPCZoneIdentifier": [
+          {
+            "Fn::If": [
+              "createNewVpcInfrastructure",
+              {
+                "Ref": "subnet"
+              },
+              {
+                "Ref": "providedSubnet"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "scheduledAction": {
+      "Type": "AWS::AutoScaling::ScheduledAction",
+      "Properties": {
+        "AutoScalingGroupName": {
+          "Ref": "autoScalingGroup"
+        },
+        "DesiredCapacity": 0,
+        "MaxSize": 0,
+        "MinSize": 0,
+        "StartTime": ""
+      }
+    },
+    "instance0": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "LaunchTemplate": {
+          "LaunchTemplateId": {
+            "Ref": "launchTemplate0"
+          },
+          "Version": {
+            "Fn::GetAtt": [
+              "launchTemplate0",
+              "LatestVersionNumber"
+            ]
+          }
+        },
+        "InstanceInitiatedShutdownBehavior": "terminate",
+        "SubnetId": {
+          "Fn::If": [
+            "createNewVpcInfrastructure",
+            {
+              "Ref": "subnet"
+            },
+            {
+              "Ref": "providedSubnet"
+            }
+          ]
+        }
+      }
+    },
+    "instance1": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "LaunchTemplate": {
+          "LaunchTemplateId": {
+            "Ref": "launchTemplate1"
+          },
+          "Version": {
+            "Fn::GetAtt": [
+              "launchTemplate1",
+              "LatestVersionNumber"
+            ]
+          }
+        },
+        "InstanceInitiatedShutdownBehavior": "terminate",
+        "SubnetId": {
+          "Fn::If": [
+            "createNewVpcInfrastructure",
+            {
+              "Ref": "subnet"
+            },
+            {
+              "Ref": "providedSubnet"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

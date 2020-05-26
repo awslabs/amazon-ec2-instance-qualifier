@@ -1,0 +1,98 @@
+{
+  "Description": "A VPC infrastructure for ec2-instance-qualifier e2e tests.",
+  "Parameters": {
+    "availabilityZone": {
+      "Description": "Availability Zone to launch instances.",
+      "Type": "AWS::EC2::AvailabilityZone::Name"
+    }
+  },
+  "Resources": {
+    "vpc": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": "10.0.0.0/24"
+      }
+    },
+    "internetGateway": {
+      "Type": "AWS::EC2::InternetGateway",
+      "Properties": {}
+    },
+    "vpcGatewayAttachment": {
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "Properties": {
+        "VpcId": {
+          "Ref": "vpc"
+        },
+        "InternetGatewayId": {
+          "Ref": "internetGateway"
+        }
+      }
+    },
+    "subnet1": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": "10.0.0.0/25",
+        "VpcId": {
+          "Ref": "vpc"
+        },
+        "AvailabilityZone": {
+          "Ref": "availabilityZone"
+        },
+        "MapPublicIpOnLaunch": true
+      }
+    },
+    "subnet2": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": "10.0.0.128/25",
+        "VpcId": {
+          "Ref": "vpc"
+        },
+        "MapPublicIpOnLaunch": true
+      }
+    },
+    "routeTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "vpc"
+        }
+      }
+    },
+    "route": {
+      "Type": "AWS::EC2::Route",
+      "DependsOn": "vpcGatewayAttachment",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "routeTable"
+        },
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": {
+          "Ref": "internetGateway"
+        }
+      }
+    },
+    "subnetRouteTableAssociation1": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "subnet1"
+        },
+        "RouteTableId": {
+          "Ref": "routeTable"
+        }
+      }
+    },
+    "subnetRouteTableAssociation2": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "subnet2"
+        },
+        "RouteTableId": {
+          "Ref": "routeTable"
+        }
+      }
+    }
+  }
+}

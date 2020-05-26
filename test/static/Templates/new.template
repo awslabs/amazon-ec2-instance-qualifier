@@ -1,0 +1,51 @@
+{
+  "Description": "Unit Test",
+  "Parameters": {
+    "parameter1": {
+      "Default": "NONE",
+      "Type": "String"
+    }
+  },
+  "Resources": {
+    "vpc": {
+      "Type": "AWS::EC2::VPC",
+      "Condition": "createNewVpcInfrastructure",
+      "Properties": {
+        "CidrBlock": "10.0.0.0/24"
+      }
+    },
+    "internetGateway": {
+      "Type": "AWS::EC2::InternetGateway",
+      "Condition": "createNewVpcInfrastructure",
+      "Properties": {}
+    },
+    "instance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "LaunchTemplate": {
+          "LaunchTemplateId": {
+            "Ref": "launchTemplate"
+          },
+          "Version": {
+            "Fn::GetAtt": [
+              "launchTemplate",
+              "LatestVersionNumber"
+            ]
+          }
+        },
+        "InstanceInitiatedShutdownBehavior": "terminate",
+        "SubnetId": {
+          "Fn::If": [
+            "createNewVpcInfrastructure",
+            {
+              "Ref": "subnet"
+            },
+            {
+              "Ref": "providedSubnet"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,69 @@
+{
+    "InstanceTypes": [
+        {
+            "AutoRecoverySupported": true,
+            "BareMetal": false,
+            "BurstablePerformanceSupported": false,
+            "CurrentGeneration": true,
+            "DedicatedHostsSupported": true,
+            "EbsInfo": {
+                "EbsOptimizedSupport": "default",
+                "EncryptionSupport": "supported"
+            },
+            "FpgaInfo": null,
+            "FreeTierEligible": false,
+            "GpuInfo": null,
+            "HibernationSupported": true,
+            "Hypervisor": "xen",
+            "InferenceAcceleratorInfo": null,
+            "InstanceStorageInfo": null,
+            "InstanceStorageSupported": false,
+            "InstanceType": "m4.xlarge",
+            "MemoryInfo": {
+                "SizeInMiB": 16384
+            },
+            "NetworkInfo": {
+                "EnaSupport": "unsupported",
+                "Ipv4AddressesPerInterface": 15,
+                "Ipv6AddressesPerInterface": 15,
+                "Ipv6Supported": true,
+                "MaximumNetworkInterfaces": 4,
+                "NetworkPerformance": "High"
+            },
+            "PlacementGroupInfo": {
+                "SupportedStrategies": [
+                    "cluster",
+                    "partition",
+                    "spread"
+                ]
+            },
+            "ProcessorInfo": {
+                "SupportedArchitectures": [
+                    "x86_64"
+                ],
+                "SustainedClockSpeedInGhz": 2.4
+            },
+            "SupportedRootDeviceTypes": [
+                "ebs"
+            ],
+            "SupportedUsageClasses": [
+                "on-demand",
+                "spot"
+            ],
+            "VCpuInfo": {
+                "DefaultCores": 2,
+                "DefaultThreadsPerCore": 2,
+                "DefaultVCpus": 4,
+                "ValidCores": [
+                    1,
+                    2
+                ],
+                "ValidThreadsPerCore": [
+                    1,
+                    2
+                ]
+            }
+        }
+    ],
+    "NextToken": null
+}

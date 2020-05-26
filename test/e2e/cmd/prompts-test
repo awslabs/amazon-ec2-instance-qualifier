@@ -1,0 +1,41 @@
+#! /usr/bin/env bash
+
+set -euo pipefail
+
+TEST_SUITE_USED="$TEST_SUITE"_prompts_test
+
+function test_answer_yes() {
+  cmd=$1
+  test_type=$2
+  output_file="$OUTPUT_DIR"/"$test_type".tmp
+
+  $cmd <<< "y" >$output_file 2>&1 &
+  wait_for_prompt $! $output_file "You may quit now" $test_type
+  echo "✅ $test_type: passed"
+
+  test_run_id=$(grep -m 1 "Test Run ID:" $output_file | awk -F": " '{print $2}')
+  clean_up $test_run_id $DEFAULT_REGION
+  is_resources_deleted "$(cat $output_file)" $test_type
+}
+
+function test_answer_no() {
+  cmd=$1
+  test_type=$2
+  output_file="$OUTPUT_DIR"/"$test_type".tmp
+
+  result=$($cmd <<< "N" >$output_file 2>&1 || echo "true")
+
+  assert_value "$result" "true" $test_type
+  is_resources_deleted "$(cat $output_file)" $test_type
+}
+
+# since the execution paths of answering yes to invalid vpc and invalid subnet are almost the same, here only test invalid vpc
+test_answer_yes "$AEIQ_BIN --instance-types=$SUPPORTED_INSTANCE_TYPES --test-suite=$TEST_SUITE_USED --target-utilization=50 --vpc=vpc-123456789" "answer_yes_to_invalid_vpc"
+test_answer_yes "$AEIQ_BIN --instance-types=$SUPPORTED_INSTANCE_TYPES --test-suite=$TEST_SUITE_USED --target-utilization=99 --subnet=$SUBNET_ID --ami=ami-123456789" "answer_yes_to_invalid_ami"
+
+test_answer_no "$AEIQ_BIN --instance-types=$SUPPORTED_INSTANCE_TYPES --test-suite=$TEST_SUITE_USED --target-utilization=50 --vpc=vpc-123456789" "answer_no_to_invalid_vpc"
+test_answer_no "$AEIQ_BIN --instance-types=$SUPPORTED_INSTANCE_TYPES --test-suite=$TEST_SUITE_USED --target-utilization=50 --subnet=subnet-123456789" "answer_no_to_invalid_subnet"
+test_answer_no "$AEIQ_BIN --instance-types=$SUPPORTED_INSTANCE_TYPES --test-suite=$TEST_SUITE_USED --target-utilization=99 --subnet=$SUBNET_ID --ami=ami-123456789" "answer_no_to_invalid_ami"
+test_answer_no "$AEIQ_BIN --instance-types=$ALL_INSTANCE_TYPES --test-suite=$TEST_SUITE_USED --target-utilization=50 --subnet=$SUBNET_ID" "answer_no_to_unsupported_instance_types"
+
+exit $EXIT_CODE_TO_RETURN

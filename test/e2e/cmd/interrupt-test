@@ -1,0 +1,100 @@
+#! /usr/bin/env bash
+
+set -euo pipefail
+
+TEST_SUITE_USED="$TEST_SUITE"_interrupt_test
+# the focus of interrupt-test is to test deletion when the CLI is interrupted at different time, so use only one instance type to save resources
+INSTANCE_TYPE_USED=m4.large
+
+function test_interrupt_before_quit_prompt() {
+  test_type="interrupt_before_quit_prompt"
+  output_file="$OUTPUT_DIR"/"$test_type".tmp
+
+  $cmd >$output_file 2>&1 &
+  wait_for_prompt $! $output_file "Waiting for stack" $test_type
+
+  test_run_id=$(grep -m 1 "Test Run ID:" $output_file | awk -F": " '{print $2}')
+  aws cloudformation wait stack-delete-complete --stack-name qualifier-stack-$test_run_id >/dev/null 2>/dev/null || :
+
+  is_resources_deleted "$(cat $output_file)" $test_type
+}
+
+function test_interrupt_after_starting_polling() {
+  # test interrupting the CLI after polling has been started, including:
+  # * interrupting the CLI when polling in a new run
+  # * interrupting the CLI when polling in a resumed run
+  # * interrupting the CLI after the final output table has been outputted
+  test_type="interrupt_after_starting_polling"
+  output_file="$OUTPUT_DIR"/"$test_type".tmp
+
+  $cmd >$output_file 2>&1 &
+  wait_for_prompt $! $output_file "Polling for" $test_type
+  test_run_id=$(grep -m 1 "Test Run ID:" $output_file | awk -F": " '{print $2}')
+  bucket="qualifier-bucket-$test_run_id"
+  check_decorating_operations $test_run_id $test_type
+  sleep 30
+
+  output_file="$OUTPUT_DIR"/"$test_type"_resumed.tmp
+  $AEIQ_BIN --bucket="$bucket" >$output_file 2>&1 &
+  wait_for_prompt $! $output_file "Polling for" $test_type
+  sleep 30
+
+  $AEIQ_BIN --bucket="$bucket" >>$output_file 2>&1 &
+  wait_for_prompt $! $output_file "Detailed test result" $test_type
+
+  aws cloudformation wait stack-delete-complete --stack-name qualifier-stack-$test_run_id >/dev/null 2>/dev/null || :
+
+  result=$(cat $output_file)
+  verify_result "$INSTANCE_TYPE_USED" "$result" "target_util_99.golden" $test_type
+  # ensure the bucket is not deleted
+  if aws s3 ls | grep $bucket >/dev/null; then
+    echo "✅ $test_type: bucket is still there"
+  else
+    echo "❌ $test_type: bucket is deleted"
+    return 1
+  fi
+  delete_bucket $bucket
+  is_resources_deleted "$result" $test_type
+}
+
+function check_decorating_operations() {
+  # check whether the operations after creating the CloudFormation stack succeed, including:
+  # * suspending the HealthCheck process of the auto scaling group
+  # * attaching all instances to the auto scaling group
+  # * adding tags to the launch templates
+  test_run_id=$1
+  test_type=$2
+  stack_name=qualifier-stack-$test_run_id
+
+  auto_scaling_group_name=$(aws cloudformation describe-stack-resource --stack-name $stack_name --logical-resource-id autoScalingGroup | grep PhysicalResourceId | awk -F": " '{print $2}' | sed 's/[,"]//g')
+  instance_ids=$(aws cloudformation list-stack-resources --stack-name $stack_name | grep "\"PhysicalResourceId\": \"i-" | awk -F": " '{print $2}' | sed 's/[,"]//g')
+  launch_template_ids=$(aws cloudformation list-stack-resources --stack-name $stack_name | grep "\"PhysicalResourceId\": \"lt-" | awk -F": " '{print $2}' | sed 's/[,"]//g')
+
+  if ! aws autoscaling describe-auto-scaling-groups --auto-scaling-group-name $auto_scaling_group_name --query 'AutoScalingGroups[].SuspendedProcesses[]' | grep HealthCheck >/dev/null; then
+    echo "❌ $test_type: failed to suspend the HealthCheck process of the auto scaling group"
+    return 1
+  fi
+
+  instance_ids_in_auto_scaling_group=$(aws autoscaling describe-auto-scaling-groups --auto-scaling-group-name $auto_scaling_group_name --query 'AutoScalingGroups[].Instances[].InstanceId')
+  for instance_id in $instance_ids; do
+    if ! echo "$instance_ids_in_auto_scaling_group" | grep "$instance_id" >/dev/null; then
+      echo "❌ $test_type: at least one instance is not attached to the auto scaling group"
+      return 1
+    fi
+  done
+
+  for launch_template_id in $launch_template_ids; do
+    if ! aws ec2 describe-launch-templates --launch-template-ids $launch_template_id --query 'LaunchTemplates[].Tags[]' | grep instance-qualifier:id >/dev/null; then
+      echo "❌ $test_type: at least one launch template failed to add tags"
+      return 1
+    fi
+  done
+
+  echo "✅ $test_type: all decorating operations succeeded"
+}
+
+cmd="$AEIQ_BIN --instance-types=$INSTANCE_TYPE_USED --test-suite=$TEST_SUITE_USED --target-utilization=99 --subnet=$SUBNET_ID"
+test_interrupt_before_quit_prompt
+test_interrupt_after_starting_polling
+
+exit $EXIT_CODE_TO_RETURN

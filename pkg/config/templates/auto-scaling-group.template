@@ -1,0 +1,47 @@
+{
+  "Resources": {
+    "autoScalingGroup": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "Properties": {
+        "LaunchTemplate": {
+          "LaunchTemplateId": {
+            "Ref": "launchTemplate0"
+          },
+          "Version": {
+            "Fn::GetAtt": [
+              "launchTemplate0",
+              "LatestVersionNumber"
+            ]
+          }
+        },
+        "MaxSize": "$instanceNum",
+        "MinSize": "0",
+        "VPCZoneIdentifier": [
+          {
+            "Fn::If": [
+              "createNewVpcInfrastructure",
+              {
+                "Ref": "subnet"
+              },
+              {
+                "Ref": "providedSubnet"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "scheduledAction": {
+      "Type": "AWS::AutoScaling::ScheduledAction",
+      "Properties": {
+        "AutoScalingGroupName": {
+          "Ref": "autoScalingGroup"
+        },
+        "DesiredCapacity": 0,
+        "MaxSize": 0,
+        "MinSize": 0,
+        "StartTime": "$startTime"
+      }
+    }
+  }
+}

@@ -1,0 +1,76 @@
+{
+    "InstanceTypes": [
+        {
+            "AutoRecoverySupported": true,
+            "BareMetal": false,
+            "BurstablePerformanceSupported": false,
+            "CurrentGeneration": true,
+            "DedicatedHostsSupported": false,
+            "EbsInfo": {
+                "EbsOptimizedSupport": "default",
+                "EncryptionSupport": "supported"
+            },
+            "FpgaInfo": null,
+            "FreeTierEligible": false,
+            "GpuInfo": null,
+            "HibernationSupported": false,
+            "Hypervisor": "nitro",
+            "InferenceAcceleratorInfo": null,
+            "InstanceStorageInfo": null,
+            "InstanceStorageSupported": false,
+            "InstanceType": "c5a.12xlarge",
+            "MemoryInfo": {
+                "SizeInMiB": 98304
+            },
+            "NetworkInfo": {
+                "EnaSupport": "required",
+                "Ipv4AddressesPerInterface": 30,
+                "Ipv6AddressesPerInterface": 30,
+                "Ipv6Supported": true,
+                "MaximumNetworkInterfaces": 8,
+                "NetworkPerformance": "12 Gigabit"
+            },
+            "PlacementGroupInfo": {
+                "SupportedStrategies": [
+                    "cluster",
+                    "partition",
+                    "spread"
+                ]
+            },
+            "ProcessorInfo": {
+                "SupportedArchitectures": [
+                    "x86_64"
+                ],
+                "SustainedClockSpeedInGhz": 2.8
+            },
+            "SupportedRootDeviceTypes": [
+                "ebs"
+            ],
+            "SupportedUsageClasses": [
+                "on-demand",
+                "spot"
+            ],
+            "VCpuInfo": {
+                "DefaultCores": 24,
+                "DefaultThreadsPerCore": 2,
+                "DefaultVCpus": 48,
+                "ValidCores": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    8,
+                    12,
+                    16,
+                    20,
+                    24
+                ],
+                "ValidThreadsPerCore": [
+                    1,
+                    2
+                ]
+            }
+        }
+    ],
+    "NextToken": null
+}

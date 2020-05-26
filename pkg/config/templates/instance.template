@@ -1,0 +1,32 @@
+{
+  "Resources": {
+    "instance$idx": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "LaunchTemplate": {
+          "LaunchTemplateId": {
+            "Ref": "launchTemplate$idx"
+          },
+          "Version": {
+            "Fn::GetAtt": [
+              "launchTemplate$idx",
+              "LatestVersionNumber"
+            ]
+          }
+        },
+        "InstanceInitiatedShutdownBehavior": "terminate",
+        "SubnetId": {
+          "Fn::If": [
+            "createNewVpcInfrastructure",
+            {
+              "Ref": "subnet"
+            },
+            {
+              "Ref": "providedSubnet"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,321 @@
+#! /usr/bin/env bash
+
+set -euo pipefail
+
+SCRIPTPATH="$(
+  cd "$(dirname "$0")"
+  pwd -P
+)"
+BIN="ec2-instance-qualifier"
+AEIQ_BIN=$SCRIPTPATH/../../build/$BIN
+SUPPORTED_INSTANCE_TYPES="m4.large,m4.xlarge,c4.large"
+UNSUPPORTED_INSTANCE_TYPE_AMI="a1.large" # unsupported due to AMI
+TEST_SUITE=$SCRIPTPATH/testdata/test-folder
+EXIT_CODE_TO_RETURN=0
+OUTPUT_DIR=$SCRIPTPATH/tmp
+WAIT_FOR_PROMPT_TIMEOUT=600
+TEST_FILES=$(find $SCRIPTPATH/cmd -type f)
+NETWORK_RESOURCES_TEMPLATE=$SCRIPTPATH/../templates/network_resources_for_tests.template
+NETWORK_STACK_NAME="qualifier-e2e-$RANDOM"
+APP_BUCKET="ec2-instance-qualifier-app"
+APP_BIN=$SCRIPTPATH/../../build/ec2-instance-qualifier-app
+
+# acceptable +/- ranges when comparing results for identical runs
+MAX_CPU_RANGE=0.3
+MAX_MEM_RANGE=50
+MAX_CPU_PERCENT_RANGE=16
+MAX_MEM_PERCENT_RANGE=2
+EXECUTION_TIME_RANGE=0.5
+
+# ================================================================================================
+# ================================ Region-Specific Variables =====================================
+
+DEFAULT_REGION="us-east-2"
+NON_DEFAULT_REGION="us-west-1"
+# availability zone in default region must meets 2 requirements:
+# * all SUPPORTED_INSTANCE_TYPES (m4.large, m4.xlarge, c4.large) are available
+# * there exists at least one instance type that is not available
+AVAILABILITY_ZONE_IN_DEFAULT_REGION="us-east-2a"
+# availability zone in non-default region must support all SUPPORTED_INSTANCE_TYPES (m4.large, m4.xlarge, c4.large)
+AVAILABILITY_ZONE_IN_NON_DEFAULT_REGION="us-west-1a"
+# an instance type that is not available in the availability zone in default region
+UNSUPPORTED_INSTANCE_TYPE_AZ="c5a.12xlarge"
+
+# ================================================================================================
+
+ALL_INSTANCE_TYPES=$SUPPORTED_INSTANCE_TYPES,$UNSUPPORTED_INSTANCE_TYPE_AMI,$UNSUPPORTED_INSTANCE_TYPE_AZ
+
+function init_test_resources() {
+  # create resources used for e2e tests
+  AWS_DEFAULT_REGION=$DEFAULT_REGION
+  echo "⏳ Initializing test resources..."
+
+  template_body=$(cat $NETWORK_RESOURCES_TEMPLATE)
+  aws cloudformation create-stack --stack-name $NETWORK_STACK_NAME --template-body "$template_body" --parameters ParameterKey=availabilityZone,ParameterValue=$AVAILABILITY_ZONE_IN_DEFAULT_REGION >/dev/null
+  aws cloudformation create-stack --stack-name $NETWORK_STACK_NAME --template-body "$template_body" --parameters ParameterKey=availabilityZone,ParameterValue=$AVAILABILITY_ZONE_IN_NON_DEFAULT_REGION --region=$NON_DEFAULT_REGION >/dev/null
+
+  VPC_WITHOUT_SUBNET=$(aws ec2 create-vpc --cidr-block 10.0.0.0/24 | grep "VpcId" | awk -F": " '{print $2}' | sed 's/[,"]//g')
+  echo "✅ Created a VPC without subnet"
+
+  aws s3 mb s3://$APP_BUCKET >/dev/null 2>/dev/null || :
+  aws s3api put-public-access-block --bucket $APP_BUCKET --public-access-block-configuration "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true" >/dev/null
+  aws s3 cp $APP_BIN s3://$APP_BUCKET/ec2-instance-qualifier-app >/dev/null
+  echo "✅ Uploaded app to the $APP_BUCKET bucket"
+
+  aws cloudformation wait stack-create-complete --stack-name $NETWORK_STACK_NAME
+  echo "✅ Created a VPC infrastructure in default region"
+  aws cloudformation wait stack-create-complete --stack-name $NETWORK_STACK_NAME --region=$NON_DEFAULT_REGION
+  echo "✅ Created a VPC infrastructure in non-default region"
+  VPC_ID=$(aws cloudformation describe-stack-resource --stack-name $NETWORK_STACK_NAME --logical-resource-id vpc | grep "PhysicalResourceId" | awk -F": " '{print $2}' | sed 's/[,"]//g')
+  SUBNET_ID=$(aws cloudformation describe-stack-resource --stack-name $NETWORK_STACK_NAME --logical-resource-id subnet1 | grep "PhysicalResourceId" | awk -F": " '{print $2}' | sed 's/[,"]//g')
+  VPC_IN_NON_DEFAULT_REGION=$(aws cloudformation describe-stack-resource --stack-name $NETWORK_STACK_NAME --logical-resource-id vpc --region=$NON_DEFAULT_REGION | grep "PhysicalResourceId" | awk -F": " '{print $2}' | sed 's/[,"]//g')
+}
+
+function clean_up_test_resources() {
+  echo "🧹 Cleaning up test resources...🧹"
+  aws cloudformation delete-stack --stack-name $NETWORK_STACK_NAME >/dev/null 2>/dev/null || :
+  aws cloudformation delete-stack --stack-name $NETWORK_STACK_NAME --region=$NON_DEFAULT_REGION >/dev/null 2>/dev/null || :
+
+  echo "Deleting the $APP_BUCKET bucket..."
+  aws s3 rb --force "s3://$APP_BUCKET" >/dev/null 2>/dev/null || :
+
+  echo "Deleting the VPC infrastructure in default region..."
+  aws cloudformation wait stack-delete-complete --stack-name $NETWORK_STACK_NAME >/dev/null 2>/dev/null || :
+  echo "Deleting the VPC infrastructure in non-default region..."
+  aws cloudformation wait stack-delete-complete --stack-name $NETWORK_STACK_NAME --region=$NON_DEFAULT_REGION >/dev/null 2>/dev/null || :
+  echo "Deleting the VPC without subnet..."
+  aws ec2 delete-vpc --vpc-id $VPC_WITHOUT_SUBNET >/dev/null 2>/dev/null || :
+  echo "Completed"
+}
+
+function assert_value() {
+  # assert actual == expected
+  if [[ $1 == $2 ]]; then
+    echo "✅ Verified $3"
+  else
+    echo "❌ Failed $3 verification. Actual: $1 Expected: $2"
+    return 1
+  fi
+}
+
+function assert_value_within_range() {
+  # assert actual == expected within specified range
+  actual=$1
+  expected=$2
+  range=$3
+  difference=$(echo "$actual" "$expected" | awk '{v=$1-$2;print (v>0)?v:-v}')
+  if (( $(echo "$difference > $range" | bc -l) )); then
+    echo "❌ Failed $4 verification. Actual: $1 Expected: $2 Range: $3"
+    return 1
+  else
+    echo "✅ Verified $4"
+  fi
+}
+
+function is_resources_deleted() {
+  # check whether resources are deleted
+  result=$1
+  test_type=$2
+  test_run_id=$(echo "$result" | grep -m 1 "Test Run ID:" | awk -F": " '{print $2}' || echo "no_resources_created_yet")
+  region=$(echo "$result" | grep -m 1 "Region Used:" | awk -F": " '{print $2}')
+
+  if [[ $test_run_id == "no_resources_created_yet" ]]; then
+    return 0
+  fi
+
+  is_deleted="$(
+    aws cloudformation describe-stacks --stack-name="qualifier-stack-$test_run_id" --region=$region >/dev/null 2>/dev/null || \
+    aws s3 ls | grep "qualifier-bucket-$test_run_id" >/dev/null 2>/dev/null || \
+    echo "true"
+  )"
+
+  if [[ "$is_deleted" == "true" ]]; then
+    echo "✅ $test_type: all resources deleted"
+  else
+    echo "❌ $test_type: at least one resource is not deleted"
+    return 1
+  fi
+}
+
+function verify_result() {
+  # compare the result with the golden file
+  IFS=',' read -ra instance_types <<< "$1"
+  result=$2
+  golden_file=$3
+  test_type=$4
+
+  for instance_type in "${instance_types[@]}"; do
+    actual_row=$(echo "$result" | grep -E "\|.*$instance_type.*\|" | sed 's/|//g' || echo "N/A")
+    expected_row=$(grep "$instance_type" "$SCRIPTPATH"/golden/"$golden_file" || echo "N/A")
+    if [[ "$expected_row" == "N/A" ]]; then
+      if [[ "$actual_row" == "N/A" ]]; then
+        continue
+      else
+        echo "❌ Failed $test_type verification. Actual: $instance_type in output Expected: no $instance_type"
+        return 1
+      fi
+    fi
+
+    actual_status=$(echo "$actual_row" | awk '{print $2}')
+    actual_max_cpu=$(echo "$actual_row" | awk '{print $3}')
+    actual_max_cpu_percent=$(echo "$actual_row" | awk '{print $4}')
+    actual_max_mem=$(echo "$actual_row" | awk '{print $5}')
+    actual_max_mem_percent=$(echo "$actual_row" | awk '{print $6}')
+    actual_pass=$(echo "$actual_row" | awk '{print $7}')
+    actual_execution_time=$(echo "$actual_row" | awk '{print $8}')
+    expected_status=$(echo "$expected_row" | awk '{print $2}')
+    expected_max_cpu=$(echo "$expected_row" | awk '{print $3}')
+    expected_max_cpu_percent=$(echo "$expected_row" | awk '{print $4}')
+    expected_max_mem=$(echo "$expected_row" | awk '{print $5}')
+    expected_max_mem_percent=$(echo "$expected_row" | awk '{print $6}')
+    expected_pass=$(echo "$expected_row" | awk '{print $7}')
+    expected_execution_time=$(echo "$expected_row" | awk '{print $8}')
+
+    assert_value "$actual_status" "$expected_status" "$test_type::$instance_type::status"
+    assert_value_within_range "$actual_max_cpu" "$expected_max_cpu" "$MAX_CPU_RANGE" "$test_type::$instance_type::max_cpu"
+    assert_value_within_range "$actual_max_cpu_percent" "$expected_max_cpu_percent" "$MAX_CPU_PERCENT_RANGE" "$test_type::$instance_type::max_cpu_percent"
+    assert_value_within_range "$actual_max_mem" "$expected_max_mem" "$MAX_MEM_RANGE" "$test_type::$instance_type::max_mem"
+    assert_value_within_range "$actual_max_mem_percent" "$expected_max_mem_percent" "$MAX_MEM_PERCENT_RANGE" "$test_type::$instance_type::max_mem_percent"
+    assert_value "$actual_pass" "$expected_pass" "$test_type::$instance_type::all_tests_pass"
+    assert_value_within_range "$actual_execution_time" "$expected_execution_time" "$EXECUTION_TIME_RANGE" "$test_type::$instance_type::execution_time"
+  done
+
+  echo "✅ $test_type: all data has been verified with golden file"
+}
+
+function delete_bucket() {
+  bucket=$1
+  aws s3 rb --force "s3://$bucket" >/dev/null 2>/dev/null || :
+}
+
+function clean_up() {
+  # delete all resources created by one instance-qualifier run
+  test_run_id=$1
+  region=$2
+
+  aws cloudformation delete-stack --stack-name="qualifier-stack-$test_run_id" --region=$region >/dev/null 2>/dev/null || :
+  aws cloudformation wait stack-delete-complete --stack-name="qualifier-stack-$test_run_id" --region=$region >/dev/null 2>/dev/null || :
+  delete_bucket "qualifier-bucket-$test_run_id"
+
+  echo "💀 Cleaned up resources of test $test_run_id 💀"
+}
+
+function fail_and_clean_up() {
+  echo "======================================================================================================"
+  echo "❌ One or more tests failed ❌"
+  echo "======================================================================================================"
+
+  pids=$(pgrep -f $BIN || :)
+  if [[ $pids ]]; then
+    echo "🧹 Cleaning up $BIN PIDs 🧹"
+    for pid in $pids; do
+      if [[ "$pid" != "$$" ]]; then
+        echo "Killing pid: $pid"
+        kill "$pid" || :
+      fi
+    done
+  fi
+
+  if [[ -d "$OUTPUT_DIR" ]]; then
+    echo "🧹 Cleaning up $BIN resources... 🧹"
+    for file in $OUTPUT_DIR/*; do
+      test_run_id=$(grep -m 1 "Test Run ID:" $file | awk -F": " '{print $2}' || :)
+      region=$(grep -m 1 "Region Used:" $file | awk -F": " '{print $2}' || :)
+      clean_up $test_run_id $region 2>/dev/null &
+    done
+    wait
+  fi
+
+  clean_up_test_resources
+
+  exit 1
+}
+
+function wait_for_prompt() {
+  # wait for a specific prompt to appear in the output file
+  pid=$1
+  output_file=$2
+  prompt=$3
+  test_type=$4
+
+  i=0
+  until grep -q "$prompt" "$output_file" 2>/dev/null; do
+    sleep 1
+    i=$(expr $i + 1)
+    if [[ $i -ge $WAIT_FOR_PROMPT_TIMEOUT ]]; then
+      echo "❌ $test_type failed due to timeout"
+      kill $pid
+      return 1
+    fi
+  done
+
+  kill $pid
+}
+
+export SCRIPTPATH
+export BIN
+export AEIQ_BIN
+export SUPPORTED_INSTANCE_TYPES
+export UNSUPPORTED_INSTANCE_TYPE_AMI
+export UNSUPPORTED_INSTANCE_TYPE_AZ
+export ALL_INSTANCE_TYPES
+export TEST_SUITE
+export VPC_ID
+export SUBNET_ID
+export VPC_IN_NON_DEFAULT_REGION
+export VPC_WITHOUT_SUBNET
+export EXIT_CODE_TO_RETURN
+export OUTPUT_DIR
+export WAIT_FOR_PROMPT_TIMEOUT
+export DEFAULT_REGION
+export NON_DEFAULT_REGION
+export MAX_CPU_RANGE
+export MAX_MEM_RANGE
+export MAX_CPU_PERCENT_RANGE
+export MAX_MEM_PERCENT_RANGE
+export EXECUTION_TIME_RANGE
+
+export -f assert_value
+export -f assert_value_within_range
+export -f is_resources_deleted
+export -f verify_result
+export -f delete_bucket
+export -f clean_up
+export -f wait_for_prompt
+
+trap "fail_and_clean_up" INT TERM ERR
+
+echo "======================================================================================================"
+echo "🥑 Setting up AEIQ e2e tests"
+echo "======================================================================================================"
+
+rm -rf $OUTPUT_DIR
+
+init_test_resources
+
+mkdir -p $OUTPUT_DIR
+
+echo "======================================================================================================"
+echo "🥑 Starting AEIQ e2e tests"
+echo "======================================================================================================"
+
+for test_file in $TEST_FILES; do
+  $test_file & pids+=($!)
+  # sleep for 1 second to avoid different runs use the same random seed
+  sleep 1
+done
+
+for pid in "${pids[@]}"; do
+  # wait on specific pid to grab the exit code
+  wait $pid
+done
+
+echo "======================================================================================================"
+echo "✅ All tests passed! ✅"
+echo "======================================================================================================"
+
+clean_up_test_resources
+
+rm -rf $OUTPUT_DIR
+
+exit $EXIT_CODE_TO_RETURN
