@@ -12,10 +12,11 @@
 	<a href="https://goreportcard.com/report/github.com/awslabs/amazon-ec2-instance-qualifier">
 	<img src="https://goreportcard.com/badge/github.com/awslabs/amazon-ec2-instance-qualifier" alt="go-report-card">
 	</a>
-  <a href="https://travis-ci.org/awslabs/amazon-ec2-instance-qualifier">
-	<img src="https://travis-ci.org/awslabs/amazon-ec2-instance-qualifier.svg?branch=master" alt="build-status">
+  <a href="https://travis-ci.com/awslabs/amazon-ec2-instance-qualifier">
+	<img src="https://travis-ci.com/awslabs/amazon-ec2-instance-qualifier.svg?branch=master" alt="build-status">
   </a>
 </p>
+
 
 
 
