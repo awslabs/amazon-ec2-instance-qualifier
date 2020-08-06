@@ -1,0 +1,35 @@
+---
+language: minimal
+
+services:
+  - docker
+
+jobs:
+  include:
+    - stage: Build and Tests
+      name: Build
+      language: go
+      go: 1.14.x
+      script: make build
+    - name: Unit tests
+      language: go
+      go: 1.14.x
+      script: make unit-test
+    - name: Markdown spellcheck
+      script: make readme-test
+    - name: License test
+      if: type = push AND env(GITHUB_TOKEN) IS present
+      language: go
+      go: 1.14.x
+      script: make license-test
+    - name: Go report card test
+      script: make go-report-card-test
+    - name: AEIQ E2E tests
+      if: type = push AND env(GITHUB_TOKEN) IS present
+      language: go
+      go: 1.14.x
+      install:
+        - curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+        - unzip awscliv2.zip
+        - sudo ./aws/install
+      script: make e2e-test
