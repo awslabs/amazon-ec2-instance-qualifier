@@ -23,8 +23,6 @@ sleep 1
 test "$AEIQ_BIN --instance-types=$ALL_INSTANCE_TYPES --test-suite=${TEST_SUITE}_timeout_with_unsupported_instance_types --target-utilization=80 --subnet=$SUBNET_ID --timeout=125" "$ALL_INSTANCE_TYPES" "timeout_with_unsupported_instance_types" "target_util_80_timeout.golden" & pids+=($!)
 sleep 1
 test "$AEIQ_BIN --instance-types=$SUPPORTED_INSTANCE_TYPES --test-suite=${TEST_SUITE}_short_timeout --target-utilization=30 --vpc=$VPC_ID --subnet=$SUBNET_ID --timeout=5" "$SUPPORTED_INSTANCE_TYPES" "short_timeout" "target_util_30_short_timeout.golden" & pids+=($!)
-sleep 1
-test "$AEIQ_BIN --instance-types=$SUPPORTED_INSTANCE_TYPES --test-suite=${TEST_SUITE}_non_default_region --target-utilization=50 --region=$NON_DEFAULT_REGION --vpc=$VPC_IN_NON_DEFAULT_REGION" "$SUPPORTED_INSTANCE_TYPES" "non_default_region" "target_util_50.golden" & pids+=($!)
 
 for pid in "${pids[@]}"; do
   wait $pid

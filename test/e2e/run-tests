@@ -17,7 +17,7 @@ WAIT_FOR_PROMPT_TIMEOUT=600
 TEST_FILES=$(find $SCRIPTPATH/cmd -type f)
 NETWORK_RESOURCES_TEMPLATE=$SCRIPTPATH/../templates/network_resources_for_tests.template
 NETWORK_STACK_NAME="qualifier-e2e-$RANDOM"
-APP_BUCKET="ec2-instance-qualifier-app"
+APP_BUCKET="ec2-instance-qualifier-app-2" #cuz eventual consistency bs
 APP_BIN=$SCRIPTPATH/../../build/ec2-instance-qualifier-app
 
 # acceptable +/- ranges when comparing results for identical runs
@@ -51,9 +51,7 @@ function init_test_resources() {
   echo "⏳ Initializing test resources..."
 
   template_body=$(cat $NETWORK_RESOURCES_TEMPLATE)
-  aws cloudformation create-stack --stack-name $NETWORK_STACK_NAME --template-body "$template_body" --parameters ParameterKey=availabilityZone,ParameterValue=$AVAILABILITY_ZONE_IN_DEFAULT_REGION >/dev/null
-  aws cloudformation create-stack --stack-name $NETWORK_STACK_NAME --template-body "$template_body" --parameters ParameterKey=availabilityZone,ParameterValue=$AVAILABILITY_ZONE_IN_NON_DEFAULT_REGION --region=$NON_DEFAULT_REGION >/dev/null
-
+  aws cloudformation create-stack --stack-name $NETWORK_STACK_NAME --template-body "$template_body" --parameters ParameterKey=availabilityZone,ParameterValue=$AVAILABILITY_ZONE_IN_DEFAULT_REGION --region=$DEFAULT_REGION >/dev/null
   VPC_WITHOUT_SUBNET=$(aws ec2 create-vpc --cidr-block 10.0.0.0/24 | grep "VpcId" | awk -F": " '{print $2}' | sed 's/[,"]//g')
   echo "✅ Created a VPC without subnet"
 
@@ -62,27 +60,21 @@ function init_test_resources() {
   aws s3 cp $APP_BIN s3://$APP_BUCKET/ec2-instance-qualifier-app >/dev/null
   echo "✅ Uploaded app to the $APP_BUCKET bucket"
 
-  aws cloudformation wait stack-create-complete --stack-name $NETWORK_STACK_NAME
+  aws cloudformation wait stack-create-complete --stack-name $NETWORK_STACK_NAME --region=$DEFAULT_REGION
   echo "✅ Created a VPC infrastructure in default region"
-  aws cloudformation wait stack-create-complete --stack-name $NETWORK_STACK_NAME --region=$NON_DEFAULT_REGION
-  echo "✅ Created a VPC infrastructure in non-default region"
-  VPC_ID=$(aws cloudformation describe-stack-resource --stack-name $NETWORK_STACK_NAME --logical-resource-id vpc | grep "PhysicalResourceId" | awk -F": " '{print $2}' | sed 's/[,"]//g')
-  SUBNET_ID=$(aws cloudformation describe-stack-resource --stack-name $NETWORK_STACK_NAME --logical-resource-id subnet1 | grep "PhysicalResourceId" | awk -F": " '{print $2}' | sed 's/[,"]//g')
-  VPC_IN_NON_DEFAULT_REGION=$(aws cloudformation describe-stack-resource --stack-name $NETWORK_STACK_NAME --logical-resource-id vpc --region=$NON_DEFAULT_REGION | grep "PhysicalResourceId" | awk -F": " '{print $2}' | sed 's/[,"]//g')
+  VPC_ID=$(aws cloudformation describe-stack-resource --stack-name $NETWORK_STACK_NAME --logical-resource-id vpc --region=$DEFAULT_REGION | grep "PhysicalResourceId" | awk -F": " '{print $2}' | sed 's/[,"]//g')
+  SUBNET_ID=$(aws cloudformation describe-stack-resource --stack-name $NETWORK_STACK_NAME --logical-resource-id subnet1 --region=$DEFAULT_REGION | grep "PhysicalResourceId" | awk -F": " '{print $2}' | sed 's/[,"]//g')
 }
 
 function clean_up_test_resources() {
   echo "🧹 Cleaning up test resources...🧹"
   aws cloudformation delete-stack --stack-name $NETWORK_STACK_NAME >/dev/null 2>/dev/null || :
-  aws cloudformation delete-stack --stack-name $NETWORK_STACK_NAME --region=$NON_DEFAULT_REGION >/dev/null 2>/dev/null || :
 
   echo "Deleting the $APP_BUCKET bucket..."
   aws s3 rb --force "s3://$APP_BUCKET" >/dev/null 2>/dev/null || :
 
   echo "Deleting the VPC infrastructure in default region..."
   aws cloudformation wait stack-delete-complete --stack-name $NETWORK_STACK_NAME >/dev/null 2>/dev/null || :
-  echo "Deleting the VPC infrastructure in non-default region..."
-  aws cloudformation wait stack-delete-complete --stack-name $NETWORK_STACK_NAME --region=$NON_DEFAULT_REGION >/dev/null 2>/dev/null || :
   echo "Deleting the VPC without subnet..."
   aws ec2 delete-vpc --vpc-id $VPC_WITHOUT_SUBNET >/dev/null 2>/dev/null || :
   echo "Completed"
@@ -298,6 +290,7 @@ mkdir -p $OUTPUT_DIR
 echo "======================================================================================================"
 echo "🥑 Starting AEIQ e2e tests"
 echo "======================================================================================================"
+
 
 for test_file in $TEST_FILES; do
   $test_file & pids+=($!)
