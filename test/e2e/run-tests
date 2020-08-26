@@ -17,7 +17,7 @@ WAIT_FOR_PROMPT_TIMEOUT=600
 TEST_FILES=$(find $SCRIPTPATH/cmd -type f)
 NETWORK_RESOURCES_TEMPLATE=$SCRIPTPATH/../templates/network_resources_for_tests.template
 NETWORK_STACK_NAME="qualifier-e2e-$RANDOM"
-APP_BUCKET="ec2-instance-qualifier-app-2" #cuz eventual consistency bs
+APP_BUCKET="ec2-instance-qualifier-app"
 APP_BIN=$SCRIPTPATH/../../build/ec2-instance-qualifier-app
 
 # acceptable +/- ranges when comparing results for identical runs

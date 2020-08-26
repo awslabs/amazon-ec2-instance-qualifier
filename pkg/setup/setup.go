@@ -77,9 +77,9 @@ BUCKET_ROOT_DIR=%s
 TARGET_UTIL=%d
 
 adduser qualifier
-cd /home/qualifier
+cd /home/qualifier || :
 mkdir instance-qualifier
-cd instance-qualifier
+cd instance-qualifier || :
 aws s3 cp s3://%s/%s .
 tar -xvf %s
 cd %s

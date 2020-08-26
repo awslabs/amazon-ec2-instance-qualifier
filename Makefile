@@ -59,7 +59,7 @@ go-report-card-test:
 shellcheck:
 	${MAKEFILE_PATH}/test/shellcheck/run-shellcheck
 
-test: unit-test readme-test license-test go-report-card-test e2e-test
+test: unit-test shellcheck readme-test license-test go-report-card-test e2e-test
 
 fmt:
 	goimports -w ./ && gofmt -s -w ./
