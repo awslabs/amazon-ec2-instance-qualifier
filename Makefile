@@ -56,6 +56,9 @@ license-test:
 go-report-card-test:
 	${MAKEFILE_PATH}/test/go-report-card-test/run-report-card-test.sh
 
+shellcheck:
+	${MAKEFILE_PATH}/test/shellcheck/run-shellcheck
+
 test: unit-test readme-test license-test go-report-card-test e2e-test
 
 fmt:

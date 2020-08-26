@@ -18,10 +18,9 @@ curl -Lo ${BUILD_DIR}/shellcheck.tar.xz "https://github.com/koalaman/shellcheck/
 tar -C ${BUILD_DIR} -xvf "${BUILD_DIR}/shellcheck.tar.xz"
 export PATH="${BUILD_DIR}/shellcheck-v${SHELLCHECK_VERSION}:$PATH"
 
-shell_files=()
-while IFS='' read -r line; do
-   shell_files+=("$line");
-done < <(grep -Rnl -e '#!.*/bin/bash' -e '#!.*/usr/bin/env bash' ${SCRIPTPATH}/../../)
+# setup.go, .template and binaries have embedded user scripts; therefore, omit from grep
+# shellcheck disable=SC2207
+shell_files=($(grep -RInl --exclude=\*.{go,template} -e '#!.*/bin/bash' -e '#!.*/usr/bin/env bash' ${SCRIPTPATH}/../../))
 shellcheck -S warning "${shell_files[@]}"
 
 echo "✅ All shell scripts look good! 😎"

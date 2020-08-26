@@ -36,8 +36,6 @@ NON_DEFAULT_REGION="us-west-1"
 # * all SUPPORTED_INSTANCE_TYPES (m4.large, m4.xlarge, c4.large) are available
 # * there exists at least one instance type that is not available
 AVAILABILITY_ZONE_IN_DEFAULT_REGION="us-east-2a"
-# availability zone in non-default region must support all SUPPORTED_INSTANCE_TYPES (m4.large, m4.xlarge, c4.large)
-AVAILABILITY_ZONE_IN_NON_DEFAULT_REGION="us-west-1a"
 # an instance type that is not available in the availability zone in default region
 UNSUPPORTED_INSTANCE_TYPE_AZ="c5a.12xlarge"
 
@@ -47,7 +45,6 @@ ALL_INSTANCE_TYPES=$SUPPORTED_INSTANCE_TYPES,$UNSUPPORTED_INSTANCE_TYPE_AMI,$UNS
 
 function init_test_resources() {
   # create resources used for e2e tests
-  AWS_DEFAULT_REGION=$DEFAULT_REGION
   echo "⏳ Initializing test resources..."
 
   template_body=$(cat $NETWORK_RESOURCES_TEMPLATE)
@@ -82,7 +79,7 @@ function clean_up_test_resources() {
 
 function assert_value() {
   # assert actual == expected
-  if [[ $1 == $2 ]]; then
+  if [[ $1 == "$2" ]]; then
     echo "✅ Verified $3"
   else
     echo "❌ Failed $3 verification. Actual: $1 Expected: $2"
