@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 aws s3 cp s3://ec2-instance-qualifier-app/ec2-instance-qualifier-app .
 chmod u+x ec2-instance-qualifier-app
 ./ec2-instance-qualifier-app >/dev/null 2>/dev/null &
@@ -14,9 +16,9 @@ BUCKET_ROOT_DIR=
 TARGET_UTIL=0
 
 adduser qualifier
-cd /home/qualifier || :
+cd /home/qualifier
 mkdir instance-qualifier
-cd instance-qualifier || :
+cd instance-qualifier
 aws s3 cp s3:///. .
 tar -xvf .
 cd .

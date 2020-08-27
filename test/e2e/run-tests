@@ -31,7 +31,7 @@ EXECUTION_TIME_RANGE=0.5
 # ================================ Region-Specific Variables =====================================
 
 DEFAULT_REGION="us-east-2"
-NON_DEFAULT_REGION="us-west-1"
+AWS_DEFAULT_REGION=$DEFAULT_REGION
 # availability zone in default region must meets 2 requirements:
 # * all SUPPORTED_INSTANCE_TYPES (m4.large, m4.xlarge, c4.large) are available
 # * there exists at least one instance type that is not available
@@ -45,10 +45,11 @@ ALL_INSTANCE_TYPES=$SUPPORTED_INSTANCE_TYPES,$UNSUPPORTED_INSTANCE_TYPE_AMI,$UNS
 
 function init_test_resources() {
   # create resources used for e2e tests
+
   echo "⏳ Initializing test resources..."
 
   template_body=$(cat $NETWORK_RESOURCES_TEMPLATE)
-  aws cloudformation create-stack --stack-name $NETWORK_STACK_NAME --template-body "$template_body" --parameters ParameterKey=availabilityZone,ParameterValue=$AVAILABILITY_ZONE_IN_DEFAULT_REGION --region=$DEFAULT_REGION >/dev/null
+  aws cloudformation create-stack --stack-name $NETWORK_STACK_NAME --template-body "$template_body" --parameters ParameterKey=availabilityZone,ParameterValue=$AVAILABILITY_ZONE_IN_DEFAULT_REGION >/dev/null
   VPC_WITHOUT_SUBNET=$(aws ec2 create-vpc --cidr-block 10.0.0.0/24 | grep "VpcId" | awk -F": " '{print $2}' | sed 's/[,"]//g')
   echo "✅ Created a VPC without subnet"
 
@@ -57,10 +58,10 @@ function init_test_resources() {
   aws s3 cp $APP_BIN s3://$APP_BUCKET/ec2-instance-qualifier-app >/dev/null
   echo "✅ Uploaded app to the $APP_BUCKET bucket"
 
-  aws cloudformation wait stack-create-complete --stack-name $NETWORK_STACK_NAME --region=$DEFAULT_REGION
+  aws cloudformation wait stack-create-complete --stack-name $NETWORK_STACK_NAME
   echo "✅ Created a VPC infrastructure in default region"
-  VPC_ID=$(aws cloudformation describe-stack-resource --stack-name $NETWORK_STACK_NAME --logical-resource-id vpc --region=$DEFAULT_REGION | grep "PhysicalResourceId" | awk -F": " '{print $2}' | sed 's/[,"]//g')
-  SUBNET_ID=$(aws cloudformation describe-stack-resource --stack-name $NETWORK_STACK_NAME --logical-resource-id subnet1 --region=$DEFAULT_REGION | grep "PhysicalResourceId" | awk -F": " '{print $2}' | sed 's/[,"]//g')
+  VPC_ID=$(aws cloudformation describe-stack-resource --stack-name $NETWORK_STACK_NAME --logical-resource-id vpc | grep "PhysicalResourceId" | awk -F": " '{print $2}' | sed 's/[,"]//g')
+  SUBNET_ID=$(aws cloudformation describe-stack-resource --stack-name $NETWORK_STACK_NAME --logical-resource-id subnet1 | grep "PhysicalResourceId" | awk -F": " '{print $2}' | sed 's/[,"]//g')
 }
 
 function clean_up_test_resources() {
@@ -113,7 +114,7 @@ function is_resources_deleted() {
   fi
 
   is_deleted="$(
-    aws cloudformation describe-stacks --stack-name="qualifier-stack-$test_run_id" --region=$region >/dev/null 2>/dev/null || \
+    aws cloudformation describe-stacks --stack-name="qualifier-stack-$test_run_id" >/dev/null 2>/dev/null || \
     aws s3 ls | grep "qualifier-bucket-$test_run_id" >/dev/null 2>/dev/null || \
     echo "true"
   )"
@@ -182,8 +183,8 @@ function clean_up() {
   test_run_id=$1
   region=$2
 
-  aws cloudformation delete-stack --stack-name="qualifier-stack-$test_run_id" --region=$region >/dev/null 2>/dev/null || :
-  aws cloudformation wait stack-delete-complete --stack-name="qualifier-stack-$test_run_id" --region=$region >/dev/null 2>/dev/null || :
+  aws cloudformation delete-stack --stack-name="qualifier-stack-$test_run_id" >/dev/null 2>/dev/null || :
+  aws cloudformation wait stack-delete-complete --stack-name="qualifier-stack-$test_run_id" >/dev/null 2>/dev/null || :
   delete_bucket "qualifier-bucket-$test_run_id"
 
   echo "💀 Cleaned up resources of test $test_run_id 💀"
@@ -251,13 +252,11 @@ export ALL_INSTANCE_TYPES
 export TEST_SUITE
 export VPC_ID
 export SUBNET_ID
-export VPC_IN_NON_DEFAULT_REGION
 export VPC_WITHOUT_SUBNET
 export EXIT_CODE_TO_RETURN
 export OUTPUT_DIR
 export WAIT_FOR_PROMPT_TIMEOUT
-export DEFAULT_REGION
-export NON_DEFAULT_REGION
+export AWS_DEFAULT_REGION
 export MAX_CPU_RANGE
 export MAX_MEM_RANGE
 export MAX_CPU_PERCENT_RANGE

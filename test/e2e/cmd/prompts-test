@@ -14,7 +14,7 @@ function test_answer_yes() {
   echo "✅ $test_type: passed"
 
   test_run_id=$(grep -m 1 "Test Run ID:" $output_file | awk -F": " '{print $2}')
-  clean_up $test_run_id $DEFAULT_REGION
+  clean_up $test_run_id $AWS_DEFAULT_REGION
   is_resources_deleted "$(cat $output_file)" $test_type
 }
 
