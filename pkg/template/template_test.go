@@ -28,10 +28,9 @@ import (
 )
 
 const (
-	templatesPath          = "../config/templates"
-	staticTemplatesPath    = "../../test/static/Templates"
+	templatesPath          = "templates"
 	userDataScriptTemplate = "../../test/static/UserData/user_data.sh"
-	masterSampleTemplate = "templates/master_sample.template"
+	masterSampleTemplate = templatesPath + "/master_sample.template"
 )
 
 var instances = []resources.Instance{
@@ -55,12 +54,6 @@ var inputStream = os.Stdin
 var outputStream = os.Stdout
 
 // Helpers
-
-func readFileInTemplatesDir(filename string, t *testing.T) string {
-	template, err := ioutil.ReadFile(staticTemplatesPath + "/" + filename)
-	h.Assert(t, err == nil, "Error reading "+filename)
-	return string(template)
-}
 
 func encodeTemplate(filename string, t *testing.T) string {
 	template, err := ioutil.ReadFile(templatesPath + "/" + filename)
