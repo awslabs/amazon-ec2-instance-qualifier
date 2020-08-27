@@ -28,9 +28,9 @@ import (
 )
 
 const (
-	templatesPath          = "templates"
-	userDataScriptTemplate = "../../test/static/UserData/user_data.sh"
-	masterSampleTemplate = templatesPath + "/master_sample.template"
+	templatesPath                = "../templates"
+	userDataScriptSampleTemplate = templatesPath + "/user-data_sample.template"
+	masterSampleTemplate         = templatesPath + "/master_sample.template"
 )
 
 var instances = []resources.Instance{
@@ -108,20 +108,20 @@ func TestPopulateInstanceTemplate(t *testing.T) {
 	actual, err := populateInstanceTemplate(numInstances)
 	h.Assert(t, err == nil, "Error calling populateInstanceTemplate")
 	for _, ev := range expectedVals {
-		h.Assert(t, strings.Contains(actual, ev), "Error: could not find " + ev + " in instance template")
+		h.Assert(t, strings.Contains(actual, ev), "Error: could not find "+ev+" in instance template")
 	}
 }
 
 func TestPopulateLaunchTemplate(t *testing.T) {
 	setEncodedTemplates(t)
 	allInstanceTypes := "m4.large,m4.xlarge"
-	userDataScript, err := ioutil.ReadFile(userDataScriptTemplate)
+	userDataScript, _ := ioutil.ReadFile(userDataScriptSampleTemplate)
 	userScriptForTemplate := processRawUserData(string(userDataScript))
 	expectedVals := []string{"launchTemplate0", "launchTemplate1", "m4.large", "m4.xlarge", userScriptForTemplate}
 	actual, err := populateLaunchTemplateTemplate(instances, allInstanceTypes, "", inputStream, outputStream)
 	h.Assert(t, err == nil, "Error calling populateLaunchTemplateTemplate")
 	for _, ev := range expectedVals {
-		h.Assert(t, strings.Contains(actual, ev), "Error: could not find " + ev + " in launch template")
+		h.Assert(t, strings.Contains(actual, ev), "Error: could not find "+ev+" in launch template")
 	}
 }
 
@@ -190,7 +190,7 @@ func TestAppendTemplate(t *testing.T) {
 	found := false
 
 	for _, ev := range expectedVals {
-		h.Assert(t, strings.Contains(template, ev), "Error: could not find " + ev + " in appended template")
+		h.Assert(t, strings.Contains(template, ev), "Error: could not find "+ev+" in appended template")
 	}
 	h.Assert(t, strings.Contains(template, fmt.Sprint(numInstances)), "Error: could not find instanceNum in appended template")
 	for _, est := range expectedStartTimes {
@@ -222,7 +222,7 @@ func TestExtractResourcesFromTemplate(t *testing.T) {
 	actual := extractResourcesFromTemplate(instanceTemplate)
 
 	for _, ev := range expectedVals {
-		h.Assert(t, strings.Contains(actual, ev), "Error: could not find " + ev + " in extracted resources from instance template")
+		h.Assert(t, strings.Contains(actual, ev), "Error: could not find "+ev+" in extracted resources from instance template")
 	}
 	h.Assert(t, !strings.Contains(actual, "Resources"), "Error: extractResourcesFromTemplate should NOT contain 'Resources'")
 }

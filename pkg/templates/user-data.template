@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+aws s3 cp s3://ec2-instance-qualifier-app/ec2-instance-qualifier-app .
+chmod u+x ec2-instance-qualifier-app
+./ec2-instance-qualifier-app >/dev/null 2>/dev/null &
+
+INSTANCE_TYPE={{ .InstanceType }}
+VCPUS_NUM={{ .VCpus }}
+MEM_SIZE={{ .Memory }}
+OS_VERSION={{ .Os }}
+ARCHITECTURE={{ .Architecture }}
+BUCKET={{ .BucketName }}
+TIMEOUT={{ .Timeout }}
+BUCKET_ROOT_DIR={{ .BucketRootDir }}
+TARGET_UTIL={{ .TargetUtil }}
+
+adduser qualifier
+cd /home/qualifier
+mkdir instance-qualifier
+cd instance-qualifier
+aws s3 cp s3://{{ .BucketName }}/{{ .CompressedTestSuiteName }} .
+tar -xvf {{ .CompressedTestSuiteName }}
+cd {{ .TestSuiteName }}
+for file in *; do
+	if [[ -f "$file" ]]; then
+		chmod u+x "$file"
+	fi
+done
+cd ../..
+chown -R qualifier instance-qualifier
+chmod u+s /sbin/shutdown
+sudo -i -u qualifier bash << EOF
+cd instance-qualifier/{{ .TestSuiteName }}
+./agent "$INSTANCE_TYPE" "$VCPUS_NUM" "$MEM_SIZE" "$OS_VERSION" "$ARCHITECTURE" "$BUCKET" "$TIMEOUT" "$BUCKET_ROOT_DIR" "$TARGET_UTIL" > {{ .InstanceType }}.log 2>&1 &
+EOF

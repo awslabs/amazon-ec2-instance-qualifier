@@ -1,6 +1,6 @@
 MAKEFILE_PATH = $(dir $(realpath -s $(firstword $(MAKEFILE_LIST))))
 BUILD_DIR_PATH = ${MAKEFILE_PATH}/build
-TEMPLATES_DIR_PATH = ${MAKEFILE_PATH}/pkg/template/templates
+TEMPLATES_DIR_PATH = ${MAKEFILE_PATH}/pkg/templates
 SCRIPTS_DIR_PATH = ${MAKEFILE_PATH}/scripts
 CLI_BINARY_NAME=ec2-instance-qualifier
 AGENT_BINARY_NAME=agent

@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	userDataFile = "../../test/static/UserData/user_data.sh"
+	userDataFile = "../templates/user-data_sample.template"
 )
 
 // Tests

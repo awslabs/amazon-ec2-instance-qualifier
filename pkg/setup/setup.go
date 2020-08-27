@@ -14,12 +14,14 @@
 package setup
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+	"text/template"
 
 	"github.com/awslabs/amazon-ec2-instance-qualifier/pkg/cmdutil"
 	"github.com/awslabs/amazon-ec2-instance-qualifier/pkg/config"
@@ -37,6 +39,11 @@ var (
 	encodedMonitorCpuScript string
 	encodedMonitorMemScript string
 )
+
+// UserScript encapsulates the data required for creating user script that will be deployed to the instance(s)
+type UserScript struct {
+	InstanceType, VCpus, Memory, Os, Architecture, BucketName, Timeout, BucketRootDir, TargetUtil, CompressedTestSuiteName, TestSuiteName string
+}
 
 // SetTestSuite copies agent scripts to test suite, compresses test suite into a tarball, then removes agent
 // scripts from test suite.
@@ -61,44 +68,30 @@ func GetUserData(instance resources.Instance) (script string) {
 	testFixture := config.GetTestFixture()
 	testSuiteName := filepath.Base(testFixture.TestSuiteName())
 	compressedTestSuiteName := filepath.Base(testFixture.CompressedTestSuiteName())
-	script = fmt.Sprintf(`#!/usr/bin/env bash
-set -euo pipefail
+	filePrefix, _ := filepath.Abs("../templates/")
+	t := template.Must(template.ParseFiles(filePrefix + "/user-data.template"))
 
-aws s3 cp s3://ec2-instance-qualifier-app/ec2-instance-qualifier-app .
-chmod u+x ec2-instance-qualifier-app
-./ec2-instance-qualifier-app >/dev/null 2>/dev/null &
+	userScript := UserScript{
+		InstanceType:            instance.InstanceType,
+		VCpus:                   instance.VCpus,
+		Memory:                  instance.Memory,
+		Os:                      instance.Os,
+		Architecture:            instance.Architecture,
+		BucketName:              testFixture.BucketName(),
+		Timeout:                 fmt.Sprint(testFixture.Timeout()),
+		BucketRootDir:           testFixture.BucketRootDir(),
+		TargetUtil:              fmt.Sprint(testFixture.TargetUtil()),
+		CompressedTestSuiteName: compressedTestSuiteName,
+		TestSuiteName:           testSuiteName,
+	}
+	var byteBuffer bytes.Buffer
+	err := t.Execute(&byteBuffer, userScript)
+	if err != nil {
+		log.Println("There was an error generating user data script: ", err)
+		return ""
+	}
 
-INSTANCE_TYPE=%s
-VCPUS_NUM=%s
-MEM_SIZE=%s
-OS_VERSION=%s
-ARCHITECTURE=%s
-BUCKET=%s
-TIMEOUT=%d
-BUCKET_ROOT_DIR=%s
-TARGET_UTIL=%d
-
-adduser qualifier
-cd /home/qualifier
-mkdir instance-qualifier
-cd instance-qualifier
-aws s3 cp s3://%s/%s .
-tar -xvf %s
-cd %s
-for file in *; do
-	if [[ -f "$file" ]]; then
-		chmod u+x "$file"
-	fi
-done
-cd ../..
-chown -R qualifier instance-qualifier
-chmod u+s /sbin/shutdown
-sudo -i -u qualifier bash << EOF
-cd instance-qualifier/%s
-./agent "$INSTANCE_TYPE" "$VCPUS_NUM" "$MEM_SIZE" "$OS_VERSION" "$ARCHITECTURE" "$BUCKET" "$TIMEOUT" "$BUCKET_ROOT_DIR" "$TARGET_UTIL" > %s.log 2>&1 &
-EOF
-`, instance.InstanceType, instance.VCpus, instance.Memory, instance.Os, instance.Architecture, testFixture.BucketName(), testFixture.Timeout(), testFixture.BucketRootDir(), testFixture.TargetUtil(),
-		testFixture.BucketName(), compressedTestSuiteName, compressedTestSuiteName, testSuiteName, testSuiteName, instance.InstanceType)
+	script = byteBuffer.String()
 	return script
 }
 
