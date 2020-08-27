@@ -4,7 +4,7 @@
 
 <p>
 	<a href="https://golang.org/doc/go1.14">
-	<img src="https://img.shields.io/github/go-mod/go-version/aws/amazon-ec2-metadata-mock?color=blueviolet" alt="go-version">
+	<img src="https://img.shields.io/github/go-mod/go-version/awslabs/amazon-ec2-instance-qualifier?color=blueviolet" alt="go-version">
 	</a>
 	<a href="https://opensource.org/licenses/Apache-2.0">
 	<img src="https://img.shields.io/badge/License-Apache%202.0-ff69b4.svg?color=orange" alt="license">
@@ -26,9 +26,9 @@
 
 ## Summary
 
-How do customers know which EC2 instance types are compatible with their application? Currently, there exists no tooling or baselining of any kind provided by AWS. If a customer wants to see which of the 250+ different instance types are acceptable, then the customer must spin up each instance type individually and test their application’s performance. Spot users often find themselves asking this question when they are told to utilize as many different instance types as possible in order to reduce the chance of spot interruptions. Still, most users will only ever choose a small subset of what could be acceptable due to the pain and cost of manual testing.
+How do users know which EC2 instance types are compatible with their application? Currently, there exists no tooling or baselining of any kind provided by AWS. If a user wants to see which of the 250+ different instance types are acceptable, then the user must spin up each instance type individually and test their application’s performance. Spot users often find themselves asking this question when they are told to utilize as many different instance types as possible in order to reduce the chance of spot interruptions. Still, most users will only ever choose a small subset of what could be acceptable due to the pain and cost of manual testing.
 
-The instance qualifier is an open source command line tool that automates benchmarking on a range of EC2 instance types. The customer will use the CLI to provide a test suite and a list of EC2 instance types. Instance qualifier will then run the input on all designated types, test against multiple metrics, and output the results in a user friendly format. In this way, instance qualifier will automate testing across instance types and address a severe pain point for spot users and EC2 customers looking to venture into other instance type families.
+The instance qualifier is an open source command line tool that automates benchmarking on a range of EC2 instance types. The user will use the CLI to provide a test suite and a list of EC2 instance types. Instance qualifier will then run the input on all designated types, test against multiple metrics, and output the results in a user friendly format. In this way, instance qualifier will automate testing across instance types and address a severe pain point for spot users and EC2 users looking to venture into other instance type families.
 
 ## Major Features
 

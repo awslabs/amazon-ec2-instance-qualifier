@@ -62,6 +62,8 @@ func GetUserData(instance resources.Instance) (script string) {
 	testSuiteName := filepath.Base(testFixture.TestSuiteName())
 	compressedTestSuiteName := filepath.Base(testFixture.CompressedTestSuiteName())
 	script = fmt.Sprintf(`#!/usr/bin/env bash
+set -euo pipefail
+
 aws s3 cp s3://ec2-instance-qualifier-app/ec2-instance-qualifier-app .
 chmod u+x ec2-instance-qualifier-app
 ./ec2-instance-qualifier-app >/dev/null 2>/dev/null &

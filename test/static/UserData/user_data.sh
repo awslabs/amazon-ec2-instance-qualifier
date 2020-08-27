@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 aws s3 cp s3://ec2-instance-qualifier-app/ec2-instance-qualifier-app .
 chmod u+x ec2-instance-qualifier-app
 ./ec2-instance-qualifier-app >/dev/null 2>/dev/null &

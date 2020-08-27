@@ -17,6 +17,8 @@ jobs:
       script: make unit-test
     - name: Markdown spellcheck
       script: make readme-test
+    - name: Check Shell Scripts
+      script: make shellcheck
     - name: License test
       if: type = push AND env(GITHUB_TOKEN) IS present
       language: go

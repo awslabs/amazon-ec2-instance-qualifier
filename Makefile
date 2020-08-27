@@ -56,7 +56,10 @@ license-test:
 go-report-card-test:
 	${MAKEFILE_PATH}/test/go-report-card-test/run-report-card-test.sh
 
-test: unit-test readme-test license-test go-report-card-test e2e-test
+shellcheck:
+	${MAKEFILE_PATH}/test/shellcheck/run-shellcheck
+
+test: unit-test shellcheck readme-test license-test go-report-card-test e2e-test
 
 fmt:
 	goimports -w ./ && gofmt -s -w ./
