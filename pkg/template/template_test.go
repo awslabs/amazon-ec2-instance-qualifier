@@ -226,3 +226,17 @@ func TestExtractResourcesFromTemplate(t *testing.T) {
 	}
 	h.Assert(t, !strings.Contains(actual, "Resources"), "Error: extractResourcesFromTemplate should NOT contain 'Resources'")
 }
+
+func TestPopulateUserData(t *testing.T) {
+	expected, err := ioutil.ReadFile(userDataScriptSampleTemplate)
+	h.Assert(t, err == nil, "Error reading the user data file")
+
+	actual := populateUserData(resources.Instance{
+		InstanceType: "m4.large",
+		VCpus:        "2",
+		Memory:       "8192",
+		Os:           "Linux/UNIX",
+		Architecture: "x86_64",
+	})
+	h.Equals(t, string(expected), actual)
+}

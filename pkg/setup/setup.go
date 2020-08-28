@@ -14,18 +14,13 @@
 package setup
 
 import (
-	"bytes"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
-	"path/filepath"
-	"text/template"
 
 	"github.com/awslabs/amazon-ec2-instance-qualifier/pkg/cmdutil"
 	"github.com/awslabs/amazon-ec2-instance-qualifier/pkg/config"
-	"github.com/awslabs/amazon-ec2-instance-qualifier/pkg/resources"
 )
 
 const (
@@ -39,11 +34,6 @@ var (
 	encodedMonitorCpuScript string
 	encodedMonitorMemScript string
 )
-
-// UserScript encapsulates the data required for creating user script that will be deployed to the instance(s)
-type UserScript struct {
-	InstanceType, VCpus, Memory, Os, Architecture, BucketName, Timeout, BucketRootDir, TargetUtil, CompressedTestSuiteName, TestSuiteName string
-}
 
 // SetTestSuite copies agent scripts to test suite, compresses test suite into a tarball, then removes agent
 // scripts from test suite.
@@ -61,38 +51,6 @@ func SetTestSuite() error {
 	}
 
 	return nil
-}
-
-// GetUserData returns the userdata script used for the launching of an instance.
-func GetUserData(instance resources.Instance) (script string) {
-	testFixture := config.GetTestFixture()
-	testSuiteName := filepath.Base(testFixture.TestSuiteName())
-	compressedTestSuiteName := filepath.Base(testFixture.CompressedTestSuiteName())
-	filePrefix, _ := filepath.Abs("../templates/")
-	t := template.Must(template.ParseFiles(filePrefix + "/user-data.template"))
-
-	userScript := UserScript{
-		InstanceType:            instance.InstanceType,
-		VCpus:                   instance.VCpus,
-		Memory:                  instance.Memory,
-		Os:                      instance.Os,
-		Architecture:            instance.Architecture,
-		BucketName:              testFixture.BucketName(),
-		Timeout:                 fmt.Sprint(testFixture.Timeout()),
-		BucketRootDir:           testFixture.BucketRootDir(),
-		TargetUtil:              fmt.Sprint(testFixture.TargetUtil()),
-		CompressedTestSuiteName: compressedTestSuiteName,
-		TestSuiteName:           testSuiteName,
-	}
-	var byteBuffer bytes.Buffer
-	err := t.Execute(&byteBuffer, userScript)
-	if err != nil {
-		log.Println("There was an error generating user data script: ", err)
-		return ""
-	}
-
-	script = byteBuffer.String()
-	return script
 }
 
 // IsInstanceQualifierScript checks whether a file is an internal script file of the instance-qualifier.
