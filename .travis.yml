@@ -27,7 +27,7 @@ jobs:
     - name: Go report card test
       script: make go-report-card-test
     - name: AEIQ E2E tests
-      if: type = push AND env(GITHUB_TOKEN) IS present
+      if: type = push AND env(AWS_ACCESS_KEY_ID) IS present
       language: go
       go: 1.14.x
       install:
