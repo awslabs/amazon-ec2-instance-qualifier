@@ -40,6 +40,7 @@ var (
 	encodedLaunchTemplateTemplate   string
 	encodedAutoScalingGroupTemplate string
 	encodedInstanceTemplate         string
+	encodedUserData                 string
 )
 
 // UserScript encapsulates the data required for creating user script that will be deployed to the instance(s)
@@ -257,8 +258,12 @@ func populateUserData(instance resources.Instance) string {
 	testFixture := config.GetTestFixture()
 	testSuiteName := filepath.Base(testFixture.TestSuiteName())
 	compressedTestSuiteName := filepath.Base(testFixture.CompressedTestSuiteName())
-	wd, err := os.Getwd()
-	t := template.Must(template.ParseFiles(wd + "/pkg/templates" + "/user-data.template"))
+	userDataTemplate, err := cmdutil.DecodeBase64(encodedUserData)
+	if err != nil {
+		log.Println("Error decoding user data: ", err)
+		return ""
+	}
+	t := template.Must(template.New("").Parse(userDataTemplate))
 
 	userScript := UserScript{
 		InstanceType:            instance.InstanceType,

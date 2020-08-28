@@ -66,6 +66,7 @@ func setEncodedTemplates(t *testing.T) {
 	encodedLaunchTemplateTemplate = encodeTemplate("launch-template.template", t)
 	encodedInstanceTemplate = encodeTemplate("instance.template", t)
 	encodedAutoScalingGroupTemplate = encodeTemplate("auto-scaling-group.template", t)
+	encodedUserData = encodeTemplate("user-data.template", t)
 }
 
 // getTimesWithBuffer returns an array of times incremented by buffer
@@ -228,6 +229,7 @@ func TestExtractResourcesFromTemplate(t *testing.T) {
 }
 
 func TestPopulateUserData(t *testing.T) {
+	setEncodedTemplates(t)
 	expected, err := ioutil.ReadFile(userDataScriptSampleTemplate)
 	h.Assert(t, err == nil, "Error reading the user data file")
 
