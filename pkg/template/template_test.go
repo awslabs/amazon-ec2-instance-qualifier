@@ -14,17 +14,23 @@
 package template
 
 import (
+	"encoding/base64"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"regexp"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/awslabs/amazon-ec2-instance-qualifier/pkg/resources"
 	h "github.com/awslabs/amazon-ec2-instance-qualifier/pkg/test"
 )
 
 const (
-	templatesPath = "../../test/static/Templates"
+	templatesPath                = "../templates"
+	userDataScriptSampleTemplate = templatesPath + "/user-data_sample.template"
+	masterSampleTemplate         = templatesPath + "/master_sample.template"
 )
 
 var instances = []resources.Instance{
@@ -49,17 +55,28 @@ var outputStream = os.Stdout
 
 // Helpers
 
-func readFileInTemplatesDir(filename string, t *testing.T) string {
+func encodeTemplate(filename string, t *testing.T) string {
 	template, err := ioutil.ReadFile(templatesPath + "/" + filename)
 	h.Assert(t, err == nil, "Error reading "+filename)
-	return string(template)
+	return base64.StdEncoding.EncodeToString(template)
 }
 
 func setEncodedTemplates(t *testing.T) {
-	encodedMasterTemplate = readFileInTemplatesDir("encoded_master", t)
-	encodedLaunchTemplateTemplate = readFileInTemplatesDir("encoded_launch_template", t)
-	encodedInstanceTemplate = readFileInTemplatesDir("encoded_instance", t)
-	encodedAutoScalingGroupTemplate = readFileInTemplatesDir("encoded_auto_scaling_group", t)
+	encodedMasterTemplate = encodeTemplate("master.template", t)
+	encodedLaunchTemplateTemplate = encodeTemplate("launch-template.template", t)
+	encodedInstanceTemplate = encodeTemplate("instance.template", t)
+	encodedAutoScalingGroupTemplate = encodeTemplate("auto-scaling-group.template", t)
+	encodedUserData = encodeTemplate("user-data.template", t)
+}
+
+// getTimesWithBuffer returns an array of times incremented by buffer
+func getTimesWithBuffer(buffer int, timeout int) []string {
+	var results []string
+	for i := 0; i <= buffer; i++ {
+		startTime := time.Now().UTC().Add(time.Second * time.Duration(timeout+timeBuffer+i))
+		results = append(results, startTime.Format(time.RFC3339))
+	}
+	return results
 }
 
 func removeStartTimeFromTemplate(template string) string {
@@ -85,14 +102,47 @@ func prepareInput(input string) (*os.File, error) {
 
 // Tests
 
-func TestGenerateCfnTemplateAllInstanceTypesSupported(t *testing.T) {
+func TestPopulateInstanceTemplate(t *testing.T) {
+	setEncodedTemplates(t)
+	numInstances := 2
+	expectedVals := []string{"instance0", "instance1", "launchTemplate0", "launchTemplate1"}
+	actual, err := populateInstanceTemplate(numInstances)
+	h.Assert(t, err == nil, "Error calling populateInstanceTemplate")
+	for _, ev := range expectedVals {
+		h.Assert(t, strings.Contains(actual, ev), "Error: could not find "+ev+" in instance template")
+	}
+}
+
+func TestPopulateLaunchTemplate(t *testing.T) {
 	setEncodedTemplates(t)
 	allInstanceTypes := "m4.large,m4.xlarge"
+	userDataScript, _ := ioutil.ReadFile(userDataScriptSampleTemplate)
+	userScriptForTemplate := processRawUserData(string(userDataScript))
+	expectedVals := []string{"launchTemplate0", "launchTemplate1", "m4.large", "m4.xlarge", userScriptForTemplate}
+	actual, err := populateLaunchTemplateTemplate(instances, allInstanceTypes, "", inputStream, outputStream)
+	h.Assert(t, err == nil, "Error calling populateLaunchTemplateTemplate")
+	for _, ev := range expectedVals {
+		h.Assert(t, strings.Contains(actual, ev), "Error: could not find "+ev+" in launch template")
+	}
+}
 
-	expected := readFileInTemplatesDir("existing_vpc.template", t)
-	actual, err := GenerateCfnTemplate(instances, allInstanceTypes, "", inputStream, outputStream)
-	h.Ok(t, err)
-	h.Equals(t, expected, removeStartTimeFromTemplate(actual))
+func TestPopulateASGTemplate(t *testing.T) {
+	setEncodedTemplates(t)
+	numberInstances := 2
+	timeout := 3
+	testBuffer := 5 //StartTime should be within 5sec
+	expectedStartTimes := getTimesWithBuffer(testBuffer, timeout)
+	actual, err := populateAutoScalingGroupTemplate(numberInstances, timeout)
+	h.Assert(t, err == nil, "Error calling populateAutoScalingGroupTemplate")
+	h.Assert(t, strings.Contains(actual, fmt.Sprint(numberInstances)), "Error: could not find instanceNum in ASG template")
+	found := false
+	for _, est := range expectedStartTimes {
+		if strings.Contains(actual, est) {
+			found = true
+			break
+		}
+	}
+	h.Assert(t, found, "Error: could not find valid StartTime in ASG template")
 }
 
 func TestGenerateCfnTemplateUnsupportedInstanceTypes_Proceed(t *testing.T) {
@@ -104,10 +154,12 @@ func TestGenerateCfnTemplateUnsupportedInstanceTypes_Proceed(t *testing.T) {
 	setEncodedTemplates(t)
 	allInstanceTypes := "m4.large,m4.xlarge,a1.large"
 
-	expected := readFileInTemplatesDir("new_vpc.template", t)
+	expected, err := ioutil.ReadFile(masterSampleTemplate)
+	h.Assert(t, err == nil, "Error reading "+masterSampleTemplate)
+
 	actual, err := GenerateCfnTemplate(instances, allInstanceTypes, "us-east-2a", inputStream, outputStream)
 	h.Ok(t, err)
-	h.Equals(t, expected, removeStartTimeFromTemplate(actual))
+	h.Equals(t, string(expected), removeStartTimeFromTemplate(actual))
 }
 
 func TestGenerateCfnTemplateUnsupportedInstanceTypes_NotProceedFailure(t *testing.T) {
@@ -124,25 +176,69 @@ func TestGenerateCfnTemplateUnsupportedInstanceTypes_NotProceedFailure(t *testin
 }
 
 func TestAppendTemplate(t *testing.T) {
-	existingTemplate := readFileInTemplatesDir("old.template", t)
-	templateToAppend := readFileInTemplatesDir("template_to_append.template", t)
-	expected := readFileInTemplatesDir("new.template", t)
+	setEncodedTemplates(t)
+	numInstances := 2
+	timeout := 3
 
-	actual := appendTemplate(existingTemplate, templateToAppend)
-	h.Equals(t, expected, actual)
+	template, err := populateAutoScalingGroupTemplate(numInstances, timeout)
+	h.Assert(t, err == nil, "Error calling populateAutoScalingGroupTemplate")
+	instanceTemplate, err := populateInstanceTemplate(numInstances)
+	h.Assert(t, err == nil, "Error calling populateInstanceTemplate")
+	template = appendTemplate(template, instanceTemplate)
+
+	expectedVals := []string{"instance0", "instance1", "launchTemplate0", "launchTemplate1"}
+	expectedStartTimes := getTimesWithBuffer(5, timeout)
+	found := false
+
+	for _, ev := range expectedVals {
+		h.Assert(t, strings.Contains(template, ev), "Error: could not find "+ev+" in appended template")
+	}
+	h.Assert(t, strings.Contains(template, fmt.Sprint(numInstances)), "Error: could not find instanceNum in appended template")
+	for _, est := range expectedStartTimes {
+		if strings.Contains(template, est) {
+			found = true
+			break
+		}
+	}
+	h.Assert(t, found, "Error: could not find valid StartTime in appended template")
 }
 
 func TestAppendTemplateToEmptyTemplate(t *testing.T) {
-	templateToAppend := readFileInTemplatesDir("template_to_append.template", t)
+	setEncodedTemplates(t)
+	numInstances := 2
+	timeout := 3
 
-	actual := appendTemplate("", templateToAppend)
-	h.Equals(t, templateToAppend, actual)
+	template, err := populateAutoScalingGroupTemplate(numInstances, timeout)
+	h.Assert(t, err == nil, "Error calling populateAutoScalingGroupTemplate")
+
+	actual := appendTemplate("", template)
+	h.Equals(t, template, actual)
 }
 
 func TestExtractResourcesFromTemplate(t *testing.T) {
-	existingTemplate := readFileInTemplatesDir("old.template", t)
-	expected := readFileInTemplatesDir("extracted_resources", t)
+	numInstances := 2
+	instanceTemplate, err := populateInstanceTemplate(numInstances)
+	h.Assert(t, err == nil, "Error calling populateInstanceTemplate")
+	expectedVals := []string{"instance0", "instance1", "launchTemplate0", "launchTemplate1"}
+	actual := extractResourcesFromTemplate(instanceTemplate)
 
-	actual := extractResourcesFromTemplate(existingTemplate)
-	h.Equals(t, expected, actual)
+	for _, ev := range expectedVals {
+		h.Assert(t, strings.Contains(actual, ev), "Error: could not find "+ev+" in extracted resources from instance template")
+	}
+	h.Assert(t, !strings.Contains(actual, "Resources"), "Error: extractResourcesFromTemplate should NOT contain 'Resources'")
+}
+
+func TestPopulateUserData(t *testing.T) {
+	setEncodedTemplates(t)
+	expected, err := ioutil.ReadFile(userDataScriptSampleTemplate)
+	h.Assert(t, err == nil, "Error reading the user data file")
+
+	actual := populateUserData(resources.Instance{
+		InstanceType: "m4.large",
+		VCpus:        "2",
+		Memory:       "8192",
+		Os:           "Linux/UNIX",
+		Architecture: "x86_64",
+	})
+	h.Equals(t, string(expected), actual)
 }

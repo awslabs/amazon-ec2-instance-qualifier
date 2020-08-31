@@ -14,17 +14,19 @@
 package template
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/awslabs/amazon-ec2-instance-qualifier/pkg/cmdutil"
 	"github.com/awslabs/amazon-ec2-instance-qualifier/pkg/config"
 	"github.com/awslabs/amazon-ec2-instance-qualifier/pkg/resources"
-	"github.com/awslabs/amazon-ec2-instance-qualifier/pkg/setup"
 )
 
 const (
@@ -38,7 +40,13 @@ var (
 	encodedLaunchTemplateTemplate   string
 	encodedAutoScalingGroupTemplate string
 	encodedInstanceTemplate         string
+	encodedUserData                 string
 )
+
+// UserScript encapsulates the data required for creating user script that will be deployed to the instance(s)
+type UserScript struct {
+	InstanceType, VCpus, Memory, Os, Architecture, BucketName, Timeout, BucketRootDir, TargetUtil, CompressedTestSuiteName, TestSuiteName string
+}
 
 // GenerateCfnTemplate returns the CloudFormation template used to create resources for instance-qualifier.
 func GenerateCfnTemplate(instances []resources.Instance, allInstanceTypes string, availabilityZone string, inputStream *os.File, outputStream *os.File) (template string, err error) {
@@ -165,7 +173,7 @@ func populateLaunchTemplateTemplate(instances []resources.Instance, allInstanceT
 		processedTemplate := strings.ReplaceAll(rawTemplate, "$idx", strconv.Itoa(i))
 		processedTemplate = strings.ReplaceAll(processedTemplate, "$amiId", amiId)
 		processedTemplate = strings.ReplaceAll(processedTemplate, "$instanceType", instance.InstanceType)
-		processedTemplate = strings.ReplaceAll(processedTemplate, "$userData", processRawUserData(setup.GetUserData(instance)))
+		processedTemplate = strings.ReplaceAll(processedTemplate, "$userData", processRawUserData(populateUserData(instance)))
 
 		template = appendTemplate(template, processedTemplate)
 	}
@@ -243,4 +251,39 @@ func populateInstanceTemplate(instanceNum int) (template string, err error) {
 	log.Println("Successfully generated the CloudFormation template of instances")
 
 	return template, nil
+}
+
+// populateUserData populates the userdata script template used for the launching of an instance.
+func populateUserData(instance resources.Instance) string {
+	testFixture := config.GetTestFixture()
+	testSuiteName := filepath.Base(testFixture.TestSuiteName())
+	compressedTestSuiteName := filepath.Base(testFixture.CompressedTestSuiteName())
+	userDataTemplate, err := cmdutil.DecodeBase64(encodedUserData)
+	if err != nil {
+		log.Println("Error decoding user data: ", err)
+		return ""
+	}
+	t := template.Must(template.New("").Parse(userDataTemplate))
+
+	userScript := UserScript{
+		InstanceType:            instance.InstanceType,
+		VCpus:                   instance.VCpus,
+		Memory:                  instance.Memory,
+		Os:                      instance.Os,
+		Architecture:            instance.Architecture,
+		BucketName:              testFixture.BucketName(),
+		Timeout:                 fmt.Sprint(testFixture.Timeout()),
+		BucketRootDir:           testFixture.BucketRootDir(),
+		TargetUtil:              fmt.Sprint(testFixture.TargetUtil()),
+		CompressedTestSuiteName: compressedTestSuiteName,
+		TestSuiteName:           testSuiteName,
+	}
+	var byteBuffer bytes.Buffer
+	err = t.Execute(&byteBuffer, userScript)
+	if err != nil {
+		log.Println("There was an error generating user data script: ", err)
+		return ""
+	}
+
+	return byteBuffer.String()
 }
