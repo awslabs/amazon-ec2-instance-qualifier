@@ -12,6 +12,7 @@ BUCKET={{ .BucketName }}
 TIMEOUT={{ .Timeout }}
 BUCKET_ROOT_DIR={{ .BucketRootDir }}
 TARGET_UTIL={{ .TargetUtil }}
+REGION={{ .Region }}
 
 adduser qualifier
 cd /home/qualifier
@@ -30,5 +31,5 @@ chown -R qualifier instance-qualifier
 chmod u+s /sbin/shutdown
 sudo -i -u qualifier bash << EOF
 cd instance-qualifier/{{ .TestSuiteName }}
-./agent "$INSTANCE_TYPE" "$VCPUS_NUM" "$MEM_SIZE" "$OS_VERSION" "$ARCHITECTURE" "$BUCKET" "$TIMEOUT" "$BUCKET_ROOT_DIR" "$TARGET_UTIL" > {{ .InstanceType }}.log 2>&1 &
+./agent "$INSTANCE_TYPE" "$VCPUS_NUM" "$MEM_SIZE" "$OS_VERSION" "$ARCHITECTURE" "$BUCKET" "$TIMEOUT" "$BUCKET_ROOT_DIR" "$TARGET_UTIL" "$REGION" > {{ .InstanceType }}.log 2>&1 &
 EOF

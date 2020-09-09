@@ -157,7 +157,7 @@ func TestGenerateCfnTemplateUnsupportedInstanceTypes_Proceed(t *testing.T) {
 	expected, err := ioutil.ReadFile(masterSampleTemplate)
 	h.Assert(t, err == nil, "Error reading "+masterSampleTemplate)
 
-	actual, err := GenerateCfnTemplate(instances, allInstanceTypes, "us-east-2a", inputStream, outputStream)
+	actual, err := GenerateCfnTemplate(instances, allInstanceTypes, "us-east-1", "us-east-2a", inputStream, outputStream)
 	h.Ok(t, err)
 	h.Equals(t, string(expected), removeStartTimeFromTemplate(actual))
 }
@@ -171,7 +171,7 @@ func TestGenerateCfnTemplateUnsupportedInstanceTypes_NotProceedFailure(t *testin
 	setEncodedTemplates(t)
 	allInstanceTypes := "m4.large,m4.xlarge,a1.large"
 
-	_, err = GenerateCfnTemplate(instances, allInstanceTypes, "", inputStream, outputStream)
+	_, err = GenerateCfnTemplate(instances, allInstanceTypes, "us-east-1", "", inputStream, outputStream)
 	h.Assert(t, err != nil, "Failed to return error when answering no to proceeding with the rest instance types")
 }
 

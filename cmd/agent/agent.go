@@ -21,7 +21,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/awslabs/amazon-ec2-instance-qualifier/pkg/agent"
 	"github.com/awslabs/amazon-ec2-instance-qualifier/pkg/cmdutil"
@@ -49,13 +48,14 @@ func main() {
 	timeout := os.Args[7]
 	bucketRootDir := os.Args[8]
 	targetUtil := os.Args[9]
+	region := os.Args[10]
 
 	// Warm-up time for 2 purposes:
 	// 1. During booting, the CPU load is not stable, so wait for some time before starting all tests
 	// 2. Ensure the instance is not terminated before being added to the auto scaling group
 	time.Sleep(1 * time.Minute)
 
-	sess, err := newAgentSession()
+	sess, err := newAgentSession(region)
 	if err != nil {
 		agent.TerminateInstance()
 	}
@@ -130,15 +130,17 @@ func main() {
 }
 
 // newAgentSession returns a session with region config.
-func newAgentSession() (sess *session.Session, err error) {
-	sess = session.Must(session.NewSession())
-	svc := resources.New(sess)
-	region, err := svc.GetRegion()
-	if err != nil {
-		return nil, err
+func newAgentSession(region string) (*session.Session, error) {
+	sessOpts := session.Options{}
+	if region != "" {
+		sessOpts.Config.Region = &region
 	}
-	sess = session.Must(session.NewSession(&aws.Config{Region: aws.String(region)}))
-	return sess, nil
+	sess := session.Must(session.NewSessionWithOptions(sessOpts))
+	if sess.Config.Region != nil && *sess.Config.Region != "" {
+		return sess, nil
+	}
+	errorMsg := "Unable to set a region for new agent session: \n"
+	return sess, fmt.Errorf(errorMsg)
 }
 
 // createAgentFixture populates the AgentFixture struct.

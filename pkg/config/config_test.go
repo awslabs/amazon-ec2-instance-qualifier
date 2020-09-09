@@ -121,8 +121,8 @@ func TestParseCliArgsEnvSuccess(t *testing.T) {
 	userConfig, err := ParseCliArgs(outputStream)
 	h.Ok(t, err)
 
-	// Assert the value was set
-	h.Equals(t, "AWS_DEFAULT_REGION", userConfig.Region())
+	// If user doesn't provide region, then it shouldn't be set in userConfig
+	h.Equals(t, "", userConfig.Region())
 
 	// Check the env var was set
 	value, ok := os.LookupEnv("AWS_DEFAULT_REGION")

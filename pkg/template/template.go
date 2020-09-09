@@ -46,11 +46,11 @@ var (
 
 // UserScript encapsulates the data required for creating user script that will be deployed to the instance(s)
 type UserScript struct {
-	InstanceType, VCpus, Memory, Os, Architecture, BucketName, Timeout, BucketRootDir, TargetUtil, CompressedTestSuiteName, TestSuiteName, CustomScript string
+	InstanceType, VCpus, Memory, Os, Architecture, BucketName, Timeout, BucketRootDir, TargetUtil, CompressedTestSuiteName, TestSuiteName, CustomScript, Region string
 }
 
 // GenerateCfnTemplate returns the CloudFormation template used to create resources for instance-qualifier.
-func GenerateCfnTemplate(instances []resources.Instance, allInstanceTypes string, availabilityZone string, inputStream *os.File, outputStream *os.File) (template string, err error) {
+func GenerateCfnTemplate(instances []resources.Instance, allInstanceTypes string, region string, availabilityZone string, inputStream *os.File, outputStream *os.File) (template string, err error) {
 	testFixture := config.GetTestFixture()
 	template, err = populateMasterTemplate(availabilityZone)
 	if err != nil {
@@ -274,7 +274,7 @@ func populateUserData(instance resources.Instance) string {
 			return ""
 		}
 	} else {
-		log.Println("customScriptPath was nil")
+		log.Println("no customScriptPath provided")
 	}
 
 	t := template.Must(template.New("").Parse(userDataTemplate))
@@ -292,8 +292,8 @@ func populateUserData(instance resources.Instance) string {
 		CompressedTestSuiteName: compressedTestSuiteName,
 		TestSuiteName:           testSuiteName,
 		CustomScript:            string(customScript),
+		Region:                  userConfig.Region(),
 	}
-
 	var byteBuffer bytes.Buffer
 	err = t.Execute(&byteBuffer, userScript)
 	if err != nil {
