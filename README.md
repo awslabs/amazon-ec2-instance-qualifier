@@ -70,10 +70,10 @@ If you already have an AWS CLI profile setup, you can pass that directly into ec
 $ ./ec2-instance-qualifier --instance-types=m4.large --test-suite=test-folder --target-utilization=30 --profile=my-aws-cli-profile --region=us-east-1
 ```
 
-You can set the `AWS_DEFAULT_REGION` environment variable if you don't want to pass in `--region` on each run.
+You can set the `AWS_REGION` environment variable if you don't want to pass in `--region` on each run.
 
 ```
-export AWS_DEFAULT_REGION="us-east-1"
+export AWS_REGION="us-east-1"
 ```
 
 ## Examples
@@ -102,6 +102,8 @@ Flags:
         [OPTIONAL] ami id
   -bucket string
         [OPTIONAL] the name of the bucket created in the last run. When provided with this flag, the CLI won't create new resources, but try to grab test results from the bucket. If you provide this flag, you don't need to specify any required flags
+  -custom-script string
+        [OPTIONAL] path to Bash script to be executed on instance-types BEFORE agent runs test-suite and monitoring
   -instance-types string
         [REQUIRED] comma-separated list of instance-types to test
   -persist
