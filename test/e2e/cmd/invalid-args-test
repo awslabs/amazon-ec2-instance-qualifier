@@ -15,9 +15,9 @@ function test() {
   is_resources_deleted "$(cat $output_file)" $test_type
 }
 
-test "$AEIQ_BIN --instance-types=$SUPPORTED_INSTANCE_TYPES --test-suite=non-existent-folder --target-utilization=50" "non_existent_test_suite_failure"
-test "$AEIQ_BIN --instance-types=$SUPPORTED_INSTANCE_TYPES --test-suite=$TEST_SUITE_USED --target-utilization=30 --vpc=$VPC_WITHOUT_SUBNET" "vpc_without_subnet_failure"
-test "$AEIQ_BIN --instance-types=$SUPPORTED_INSTANCE_TYPES --test-suite=$TEST_SUITE_USED --target-utilization=50 --vpc=vpc-123456789 --subnet=subnet-123456789" "invalid_vpc_and_subnet_failure"
-test "$AEIQ_BIN --instance-types=$UNSUPPORTED_INSTANCE_TYPE_AMI,$UNSUPPORTED_INSTANCE_TYPE_AZ --test-suite=$TEST_SUITE_USED --target-utilization=50 --subnet=$SUBNET_ID" "no_supported_instance_types"
+test "$AEIQ_BIN --instance-types=$SUPPORTED_INSTANCE_TYPES --test-suite=non-existent-folder --target-utilization=50 --custom-script=$CUSTOM_SCRIPT" "non_existent_test_suite_failure"
+test "$AEIQ_BIN --instance-types=$SUPPORTED_INSTANCE_TYPES --test-suite=$TEST_SUITE_USED --target-utilization=30 --vpc=$VPC_WITHOUT_SUBNET --custom-script=$CUSTOM_SCRIPT" "vpc_without_subnet_failure"
+test "$AEIQ_BIN --instance-types=$SUPPORTED_INSTANCE_TYPES --test-suite=$TEST_SUITE_USED --target-utilization=50 --vpc=vpc-123456789 --subnet=subnet-123456789 --custom-script=$CUSTOM_SCRIPT" "invalid_vpc_and_subnet_failure"
+test "$AEIQ_BIN --instance-types=$UNSUPPORTED_INSTANCE_TYPE_AMI,$UNSUPPORTED_INSTANCE_TYPE_AZ --test-suite=$TEST_SUITE_USED --target-utilization=50 --subnet=$SUBNET_ID --custom-script=$CUSTOM_SCRIPT" "no_supported_instance_types"
 
 exit $EXIT_CODE_TO_RETURN

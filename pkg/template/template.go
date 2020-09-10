@@ -16,6 +16,7 @@ package template
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -45,7 +46,7 @@ var (
 
 // UserScript encapsulates the data required for creating user script that will be deployed to the instance(s)
 type UserScript struct {
-	InstanceType, VCpus, Memory, Os, Architecture, BucketName, Timeout, BucketRootDir, TargetUtil, CompressedTestSuiteName, TestSuiteName string
+	InstanceType, VCpus, Memory, Os, Architecture, BucketName, Timeout, BucketRootDir, TargetUtil, CompressedTestSuiteName, TestSuiteName, CustomScript string
 }
 
 // GenerateCfnTemplate returns the CloudFormation template used to create resources for instance-qualifier.
@@ -256,6 +257,7 @@ func populateInstanceTemplate(instanceNum int) (template string, err error) {
 // populateUserData populates the userdata script template used for the launching of an instance.
 func populateUserData(instance resources.Instance) string {
 	testFixture := config.GetTestFixture()
+	userConfig := config.GetUserConfig()
 	testSuiteName := filepath.Base(testFixture.TestSuiteName())
 	compressedTestSuiteName := filepath.Base(testFixture.CompressedTestSuiteName())
 	userDataTemplate, err := cmdutil.DecodeBase64(encodedUserData)
@@ -263,6 +265,18 @@ func populateUserData(instance resources.Instance) string {
 		log.Println("Error decoding user data: ", err)
 		return ""
 	}
+	var customScript []byte
+	customScriptPath := userConfig.CustomScriptPath()
+	if customScriptPath != "" {
+		customScript, err = ioutil.ReadFile(customScriptPath)
+		if err != nil {
+			log.Println("There was an error extracting custom script: ", err)
+			return ""
+		}
+	} else {
+		log.Println("customScriptPath was nil")
+	}
+
 	t := template.Must(template.New("").Parse(userDataTemplate))
 
 	userScript := UserScript{
@@ -277,7 +291,9 @@ func populateUserData(instance resources.Instance) string {
 		TargetUtil:              fmt.Sprint(testFixture.TargetUtil()),
 		CompressedTestSuiteName: compressedTestSuiteName,
 		TestSuiteName:           testSuiteName,
+		CustomScript:            string(customScript),
 	}
+
 	var byteBuffer bytes.Buffer
 	err = t.Execute(&byteBuffer, userScript)
 	if err != nil {

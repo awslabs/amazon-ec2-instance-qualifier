@@ -68,13 +68,18 @@ func GetTestFixture() TestFixture {
 	return testFixture
 }
 
+// GetUserConfig returns userConfig.
+func GetUserConfig() UserConfig {
+	return userConfig
+}
+
 // SetTestFixtureBucketName sets bucketName of testFixture.
 func SetTestFixtureBucketName(bucketName string) {
 	testFixture.bucketName = bucketName
 }
 
 // ParseCliArgs parses CLI arguments and uses environment variables as fallback values for some flags.
-func ParseCliArgs(outputStream *os.File) (userConfig UserConfig, err error) {
+func ParseCliArgs(outputStream *os.File) (UserConfig, error) {
 	// Customize usage message
 	flag.Usage = func() {
 		longUsage := fmt.Sprintf(`%s is a CLI tool that automates testing on a range of EC2 instance types.
@@ -97,6 +102,7 @@ in a user friendly format`, binName, binName)
 	flag.StringVar(&userConfig.instanceTypes, "instance-types", "", "[REQUIRED] comma-separated list of instance-types to test")
 	flag.StringVar(&userConfig.testSuiteName, "test-suite", "", "[REQUIRED] folder containing test files to execute")
 	flag.IntVar(&userConfig.targetUtil, "target-utilization", 0, "[REQUIRED] % of total resource used (CPU, Mem) benchmark (must be an integer). ex: 30 means instances using less than 30% CPU and Mem SUCCEED")
+	flag.StringVar(&userConfig.customScriptPath, "custom-script", "", "[OPTIONAL] path to Bash script to be executed on instance-types BEFORE agent runs test-suite and monitoring")
 	flag.StringVar(&userConfig.vpcId, "vpc", "", "[OPTIONAL] vpc id")
 	flag.StringVar(&userConfig.subnetId, "subnet", "", "[OPTIONAL] subnet id")
 	flag.StringVar(&userConfig.amiId, "ami", "", "[OPTIONAL] ami id")
@@ -131,7 +137,7 @@ in a user friendly format`, binName, binName)
 			}
 		}
 	}
-	fmt.Fprintf(outputStream, "Region Used: %s\n", userConfig.region)
+	fmt.Fprintf(outputStream, "Configuration used: %v\n", userConfig)
 
 	return userConfig, nil
 }
@@ -198,6 +204,8 @@ func populateUserConfig(userConfig *UserConfig, key string, value string) (err e
 		userConfig.testSuiteName = value
 	case "target-utilization":
 		userConfig.targetUtil, err = strconv.Atoi(value)
+	case "custom-script":
+		userConfig.customScriptPath = value
 	case "vpc":
 		userConfig.vpcId = value
 	case "subnet":

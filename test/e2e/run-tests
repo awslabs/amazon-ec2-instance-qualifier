@@ -16,6 +16,7 @@ OUTPUT_DIR=$SCRIPTPATH/tmp
 WAIT_FOR_PROMPT_TIMEOUT=600
 TEST_FILES=$(find $SCRIPTPATH/cmd -type f)
 NETWORK_RESOURCES_TEMPLATE=$SCRIPTPATH/../templates/network_resources_for_tests.template
+CUSTOM_SCRIPT=$SCRIPTPATH/../templates/custom-script_sample.template
 NETWORK_STACK_NAME="qualifier-e2e-$RANDOM"
 APP_BUCKET="ec2-instance-qualifier-app"
 APP_BIN=$SCRIPTPATH/../../build/ec2-instance-qualifier-app
@@ -262,6 +263,7 @@ export MAX_MEM_RANGE
 export MAX_CPU_PERCENT_RANGE
 export MAX_MEM_PERCENT_RANGE
 export EXECUTION_TIME_RANGE
+export CUSTOM_SCRIPT
 
 export -f assert_value
 export -f assert_value_within_range
@@ -304,7 +306,5 @@ echo "✅ All tests passed! ✅"
 echo "======================================================================================================"
 
 clean_up_test_resources
-
-rm -rf $OUTPUT_DIR
 
 exit $EXIT_CODE_TO_RETURN
