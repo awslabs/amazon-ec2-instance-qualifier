@@ -37,10 +37,10 @@ const (
 	cfnTemplateFilePrefix = "qualifier-cfn-template-"
 	binName               = "ec2-instance-qualifier"
 	defaultTimeout        = 3600
-	defaultProfile      = "default"
-	awsConfigFile       = "~/.aws/config"
-	awsRegionEnvVar     = "AWS_REGION"
-	defaultRegionEnvVar = "AWS_DEFAULT_REGION"
+	defaultProfile        = "default"
+	awsConfigFile         = "~/.aws/config"
+	awsRegionEnvVar       = "AWS_REGION"
+	defaultRegionEnvVar   = "AWS_DEFAULT_REGION"
 )
 
 // PopulateTestFixture populates the test fixture which contains constant information for the entire run.

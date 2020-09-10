@@ -35,8 +35,6 @@ import (
 
 // Enums indicating what resources need to be deleted
 const (
-	awsRegionEnvVar     = "AWS_REGION"
-
 	deleteNothing = iota
 	deleteCfnStack
 	deleteAll // delete bucket and CloudFormation stack
@@ -180,11 +178,7 @@ func prepareForNewRun(sess *session.Session, userConfig config.UserConfig, runId
 		return "", err
 	}
 
-	region, err := svc.GetRegion()
-	if err != nil {
-		return "", err
-	}
-	cfnTemplate, err = template.GenerateCfnTemplate(instances, userConfig.InstanceTypes(), region, availabilityZone, inputStream, outputStream)
+	cfnTemplate, err = template.GenerateCfnTemplate(instances, userConfig.InstanceTypes(), availabilityZone, inputStream, outputStream)
 	if err != nil {
 		return "", err
 	}

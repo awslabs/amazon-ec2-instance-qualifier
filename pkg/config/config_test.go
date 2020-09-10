@@ -111,7 +111,7 @@ func TestPopulateTestFixtureForResumedRun(t *testing.T) {
 
 func TestParseCliArgsEnvSuccess(t *testing.T) {
 	resetFlagsForTest()
-	os.Setenv("AWS_DEFAULT_REGION", "AWS_DEFAULT_REGION")
+	os.Setenv("AWS_REGION", "us-weast-1")
 	os.Args = []string{
 		"cmd",
 		"--instance-types=INSTANCE_TYPES",
@@ -121,13 +121,7 @@ func TestParseCliArgsEnvSuccess(t *testing.T) {
 	userConfig, err := ParseCliArgs(outputStream)
 	h.Ok(t, err)
 
-	// If user doesn't provide region, then it shouldn't be set in userConfig
-	h.Equals(t, "", userConfig.Region())
-
-	// Check the env var was set
-	value, ok := os.LookupEnv("AWS_DEFAULT_REGION")
-	h.Equals(t, true, ok)
-	h.Equals(t, "AWS_DEFAULT_REGION", value)
+	h.Equals(t, "us-weast-1", userConfig.Region())
 }
 
 func TestParseCliArgsSuccess(t *testing.T) {
@@ -207,11 +201,6 @@ func TestParseCliArgsOverrides(t *testing.T) {
 	h.Equals(t, true, userConfig.Persist())
 	h.Equals(t, "PROFILE", userConfig.Profile())
 	h.Equals(t, "REGION", userConfig.Region())
-
-	// Check that env var was set
-	value, ok := os.LookupEnv("AWS_DEFAULT_REGION")
-	h.Equals(t, true, ok)
-	h.Equals(t, "AWS_DEFAULT_REGION", value)
 }
 
 func TestParseCliArgsMissingInstanceTypesFailure(t *testing.T) {

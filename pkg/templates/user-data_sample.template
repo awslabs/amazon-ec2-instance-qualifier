@@ -12,7 +12,7 @@ BUCKET=
 TIMEOUT=0
 BUCKET_ROOT_DIR=
 TARGET_UTIL=0
-REGION=us-east-1
+REGION=
 
 adduser qualifier
 cd /home/qualifier

@@ -50,7 +50,7 @@ type UserScript struct {
 }
 
 // GenerateCfnTemplate returns the CloudFormation template used to create resources for instance-qualifier.
-func GenerateCfnTemplate(instances []resources.Instance, allInstanceTypes string, region string, availabilityZone string, inputStream *os.File, outputStream *os.File) (template string, err error) {
+func GenerateCfnTemplate(instances []resources.Instance, allInstanceTypes string, availabilityZone string, inputStream *os.File, outputStream *os.File) (template string, err error) {
 	testFixture := config.GetTestFixture()
 	template, err = populateMasterTemplate(availabilityZone)
 	if err != nil {
