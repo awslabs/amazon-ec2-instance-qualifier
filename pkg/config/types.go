@@ -15,17 +15,18 @@ package config
 
 // UserConfig contains configuration provided by the user, which remains unchanged throughout the entire run.
 type UserConfig struct {
-	instanceTypes string
-	testSuiteName string
-	targetUtil    int
-	vpcId         string
-	subnetId      string
-	amiId         string
-	timeout       int
-	persist       bool
-	profile       string
-	region        string
-	bucket        string
+	instanceTypes    string
+	testSuiteName    string
+	targetUtil       int
+	vpcId            string
+	subnetId         string
+	amiId            string
+	timeout          int
+	persist          bool
+	profile          string
+	region           string
+	bucket           string
+	customScriptPath string
 }
 
 // TestFixture contains constant information for the entire run.
@@ -45,6 +46,7 @@ type TestFixture struct {
 }
 
 var testFixture TestFixture
+var userConfig UserConfig
 
 // InstanceTypes returns instanceTypes.
 func (u UserConfig) InstanceTypes() string {
@@ -59,6 +61,11 @@ func (u UserConfig) TestSuiteName() string {
 // TargetUtil returns targetUtil.
 func (u UserConfig) TargetUtil() int {
 	return u.targetUtil
+}
+
+// CustomScriptPath returns customScriptPath.
+func (u UserConfig) CustomScriptPath() string {
+	return u.customScriptPath
 }
 
 // VpcId returns vpcId.

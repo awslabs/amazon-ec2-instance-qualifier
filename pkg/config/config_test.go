@@ -145,6 +145,7 @@ func TestParseCliArgsSuccess(t *testing.T) {
 		"--profile=PROFILE",
 		"--region=REGION",
 		"--bucket=BUCKET",
+		"--custom-script=/path/to/script",
 	}
 	userConfig, err := ParseCliArgs(outputStream)
 	h.Ok(t, err)
@@ -161,6 +162,7 @@ func TestParseCliArgsSuccess(t *testing.T) {
 	h.Equals(t, "PROFILE", userConfig.Profile())
 	h.Equals(t, "REGION", userConfig.Region())
 	h.Equals(t, "BUCKET", userConfig.Bucket())
+	h.Equals(t, "/path/to/script", userConfig.CustomScriptPath())
 }
 
 func TestParseCliArgsOnlyBucketSuccess(t *testing.T) {
