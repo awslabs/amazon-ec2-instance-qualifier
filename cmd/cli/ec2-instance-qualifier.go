@@ -51,7 +51,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	sess := newSession(userConfig)
+	sess, err := newSession(userConfig)
+	if err != nil {
+		log.Fatal(err)
+	}
 	svc := resources.New(sess)
 
 	sigs := make(chan os.Signal, 1)
@@ -119,16 +122,22 @@ func main() {
 }
 
 // newSession returns a session with user provided config.
-func newSession(userConfig config.UserConfig) (sess *session.Session) {
+func newSession(userConfig config.UserConfig) (*session.Session, error) {
 	sessOpts := session.Options{}
-	if userConfig.Profile() != "" {
-		sessOpts.Profile = userConfig.Profile()
-	}
 	region := userConfig.Region()
-	sessOpts.Config.Region = &region
-	sess = session.Must(session.NewSessionWithOptions(sessOpts))
+	profile := userConfig.Profile()
+	if region != "" {
+		sessOpts.Config.Region = &region
+	}
+	if profile != "" {
+		sessOpts.Profile = profile
+	}
+	sess := session.Must(session.NewSessionWithOptions(sessOpts))
+	if sess.Config.Region != nil && *sess.Config.Region != "" {
+		return sess, nil
+	}
 
-	return sess
+	return sess, fmt.Errorf("cannot start test run without a region; refer to Configuration for more information")
 }
 
 // prepareForNewRun does the preparation work for a new instance-qualifier run, including populating TestFixture,

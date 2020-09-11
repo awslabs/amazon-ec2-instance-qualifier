@@ -23,19 +23,24 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	homedir "github.com/mitchellh/go-homedir"
+	"gopkg.in/ini.v1"
 )
 
 const (
-	bucketRootDirPrefix       = "Instance-Qualifier-Run-"
-	compressSuffix            = ".tar.gz"
-	cfnStackNamePrefix        = "qualifier-stack-"
-	finalResultPrefix         = "final-results-"
-	userConfigFilePrefix      = "instance-qualifier-"
-	cfnTemplateFilePrefix     = "qualifier-cfn-template-"
-	binName                   = "ec2-instance-qualifier"
-	defaultRegion             = "us-east-2"
-	defaultTimeout            = 3600
-	awsDefaultRegionConfigKey = "AWS_DEFAULT_REGION"
+	bucketRootDirPrefix   = "Instance-Qualifier-Run-"
+	compressSuffix        = ".tar.gz"
+	cfnStackNamePrefix    = "qualifier-stack-"
+	finalResultPrefix     = "final-results-"
+	userConfigFilePrefix  = "instance-qualifier-"
+	cfnTemplateFilePrefix = "qualifier-cfn-template-"
+	binName               = "ec2-instance-qualifier"
+	defaultTimeout        = 3600
+	defaultProfile        = "default"
+	awsConfigFile         = "~/.aws/config"
+	awsRegionEnvVar       = "AWS_REGION"
+	defaultRegionEnvVar   = "AWS_DEFAULT_REGION"
 )
 
 // PopulateTestFixture populates the test fixture which contains constant information for the entire run.
@@ -129,14 +134,8 @@ in a user friendly format`, binName, binName)
 	if userConfig.timeout <= 0 {
 		return userConfig, errors.New("you must provide a timeout greater than 0")
 	}
-	if userConfig.region == "" {
-		userConfig.region = defaultRegion
-		if region, ok := os.LookupEnv(awsDefaultRegionConfigKey); ok {
-			if region != "" {
-				userConfig.region = region
-			}
-		}
-	}
+	setUserConfigRegion()
+
 	fmt.Fprintf(outputStream, "Configuration used: %v\n", userConfig)
 
 	return userConfig, nil
@@ -227,4 +226,53 @@ func populateUserConfig(userConfig *UserConfig, key string, value string) (err e
 	}
 
 	return err
+}
+
+func getProfileRegion(profileName string) (string, error) {
+	if profileName != defaultProfile {
+		profileName = fmt.Sprintf("profile %s", profileName)
+	}
+	awsConfigPath, err := homedir.Expand(awsConfigFile)
+	if err != nil {
+		return "", fmt.Errorf("Warning: unable to find home directory to parse aws config file")
+	}
+	awsConfigIni, err := ini.Load(awsConfigPath)
+	if err != nil {
+		return "", fmt.Errorf("Warning: unable to load aws config file for profile at path: %s", awsConfigPath)
+	}
+	section, err := awsConfigIni.GetSection(profileName)
+	if err != nil {
+		return "", fmt.Errorf("Warning: there is no configuration for the specified aws profile %s at %s", profileName, awsConfigPath)
+	}
+	regionConfig, err := section.GetKey("region")
+	if err != nil || regionConfig.String() == "" {
+		return "", fmt.Errorf("Warning: there is no region configured for the specified aws profile %s at %s", profileName, awsConfigPath)
+	}
+	return regionConfig.String(), nil
+}
+
+func setUserConfigRegion() {
+	if userConfig.region == "" {
+		if userConfig.profile != "" {
+			if profileRegion, err := getProfileRegion(userConfig.profile); err == nil {
+				userConfig.region = profileRegion
+			}
+		} else if envRegion, ok := os.LookupEnv(awsRegionEnvVar); ok && envRegion != "" {
+			userConfig.region = envRegion
+		} else if defaultProfileRegion, err := getProfileRegion(defaultProfile); err == nil {
+			userConfig.region = defaultProfileRegion
+		} else if defaultRegion, ok := os.LookupEnv(defaultRegionEnvVar); ok && defaultRegion != "" {
+			userConfig.region = defaultRegion
+		} else {
+			errorMsg := "Failed to determine region from the following sources: \n"
+			errorMsg = errorMsg + "\t - --region flag\n"
+			if userConfig.profile != "" {
+				errorMsg = errorMsg + fmt.Sprintf("\t - profile region in %s\n", awsConfigFile)
+			}
+			errorMsg = errorMsg + fmt.Sprintf("\t - %s environment variable\n", awsRegionEnvVar)
+			errorMsg = errorMsg + fmt.Sprintf("\t - default profile region in %s\n", awsConfigFile)
+			errorMsg = errorMsg + fmt.Sprintf("\t - %s environment variable\n", defaultRegionEnvVar)
+			fmt.Println(errorMsg)
+		}
+	}
 }

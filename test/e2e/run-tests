@@ -32,7 +32,7 @@ EXECUTION_TIME_RANGE=0.5
 # ================================ Region-Specific Variables =====================================
 
 DEFAULT_REGION="us-east-2"
-AWS_DEFAULT_REGION=$DEFAULT_REGION
+AWS_REGION=$DEFAULT_REGION
 # availability zone in default region must meets 2 requirements:
 # * all SUPPORTED_INSTANCE_TYPES (m4.large, m4.xlarge, c4.large) are available
 # * there exists at least one instance type that is not available
@@ -60,7 +60,7 @@ function init_test_resources() {
   echo "✅ Uploaded app to the $APP_BUCKET bucket"
 
   aws cloudformation wait stack-create-complete --stack-name $NETWORK_STACK_NAME
-  echo "✅ Created a VPC infrastructure in default region"
+  echo "✅ Created a VPC infrastructure in $AWS_REGION"
   VPC_ID=$(aws cloudformation describe-stack-resource --stack-name $NETWORK_STACK_NAME --logical-resource-id vpc | grep "PhysicalResourceId" | awk -F": " '{print $2}' | sed 's/[,"]//g')
   SUBNET_ID=$(aws cloudformation describe-stack-resource --stack-name $NETWORK_STACK_NAME --logical-resource-id subnet1 | grep "PhysicalResourceId" | awk -F": " '{print $2}' | sed 's/[,"]//g')
 }
@@ -72,7 +72,7 @@ function clean_up_test_resources() {
   echo "Deleting the $APP_BUCKET bucket..."
   aws s3 rb --force "s3://$APP_BUCKET" >/dev/null 2>/dev/null || :
 
-  echo "Deleting the VPC infrastructure in default region..."
+  echo "Deleting the VPC infrastructure in $AWS_REGION..."
   aws cloudformation wait stack-delete-complete --stack-name $NETWORK_STACK_NAME >/dev/null 2>/dev/null || :
   echo "Deleting the VPC without subnet..."
   aws ec2 delete-vpc --vpc-id $VPC_WITHOUT_SUBNET >/dev/null 2>/dev/null || :
@@ -108,7 +108,6 @@ function is_resources_deleted() {
   result=$1
   test_type=$2
   test_run_id=$(echo "$result" | grep -m 1 "Test Run ID:" | awk -F": " '{print $2}' || echo "no_resources_created_yet")
-  region=$(echo "$result" | grep -m 1 "Region Used:" | awk -F": " '{print $2}')
 
   if [[ $test_run_id == "no_resources_created_yet" ]]; then
     return 0
@@ -182,7 +181,6 @@ function delete_bucket() {
 function clean_up() {
   # delete all resources created by one instance-qualifier run
   test_run_id=$1
-  region=$2
 
   aws cloudformation delete-stack --stack-name="qualifier-stack-$test_run_id" >/dev/null 2>/dev/null || :
   aws cloudformation wait stack-delete-complete --stack-name="qualifier-stack-$test_run_id" >/dev/null 2>/dev/null || :
@@ -211,8 +209,7 @@ function fail_and_clean_up() {
     echo "🧹 Cleaning up $BIN resources... 🧹"
     for file in $OUTPUT_DIR/*; do
       test_run_id=$(grep -m 1 "Test Run ID:" $file | awk -F": " '{print $2}' || :)
-      region=$(grep -m 1 "Region Used:" $file | awk -F": " '{print $2}' || :)
-      clean_up $test_run_id $region 2>/dev/null &
+      clean_up $test_run_id 2>/dev/null &
     done
     wait
   fi
@@ -257,7 +254,7 @@ export VPC_WITHOUT_SUBNET
 export EXIT_CODE_TO_RETURN
 export OUTPUT_DIR
 export WAIT_FOR_PROMPT_TIMEOUT
-export AWS_DEFAULT_REGION
+export AWS_REGION
 export MAX_CPU_RANGE
 export MAX_MEM_RANGE
 export MAX_CPU_PERCENT_RANGE
