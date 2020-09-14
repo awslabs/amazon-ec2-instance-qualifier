@@ -160,11 +160,15 @@ func TestParseCliArgsSuccess(t *testing.T) {
 }
 
 func TestParseCliArgsPriority(t *testing.T) {
+	// Priority:
+	// 1. CLI Args
+	// 2. Env Vars
+	// 3. Config File
 	resetFlagsForTest()
 	os.Setenv("AWS_REGION", "us-weast-1")
 	os.Args = []string{
 		"cmd",
-		"--instance-types=INSTANCE_TYPES",
+		"--instance-types=INSTANCE_TYPES_Args",
 		"--test-suite=TEST_SUITE",
 		"--target-utilization=30",
 		"--config-file=../../test/static/UserConfigFiles/valid.config",
@@ -172,11 +176,11 @@ func TestParseCliArgsPriority(t *testing.T) {
 	userConfig, err := ParseCliArgs(outputStream)
 	h.Ok(t, err)
 
-	h.Equals(t, "INSTANCE_TYPES", userConfig.InstanceTypes)
-	h.Equals(t, "us-east-2", userConfig.Region)
-	h.Equals(t, 50, userConfig.TargetUtil)
-	h.Equals(t, 12345, userConfig.Timeout)
-	h.Equals(t, "../../test/static/UserConfigFiles/valid.config", userConfig.ConfigFilePath)
+	h.Equals(t, "INSTANCE_TYPES_Args", userConfig.InstanceTypes)                             //Args
+	h.Equals(t, 30, userConfig.TargetUtil)                                                   //Args
+	h.Equals(t, "../../test/static/UserConfigFiles/valid.config", userConfig.ConfigFilePath) //Args
+	h.Equals(t, "us-weast-1", userConfig.Region)                                             //Env
+	h.Equals(t, 12345, userConfig.Timeout)                                                   //Config File
 }
 
 func TestParseCliArgsOnlyBucketSuccess(t *testing.T) {

@@ -117,16 +117,18 @@ in a user friendly format`, binName, binName)
 	flag.StringVar(&userConfig.Bucket, "bucket", "", "[OPTIONAL] the name of the Bucket created in the last run. When provided with this flag, the CLI won't create new resources, but try to grab test results from the Bucket. If you provide this flag, you don't need to specify any required flags")
 
 	flag.Parse()
+	setUserConfigRegion()
 
 	var configFile string
 	if userConfig.ConfigFilePath != "" {
 		configFile = userConfig.ConfigFilePath
-		fmt.Println("detected config file")
-		_, err := ReadUserConfig(userConfig.ConfigFilePath)
+		tmpConfig, err := ReadUserConfig(userConfig.ConfigFilePath)
+		userConfig.SetUserConfig(tmpConfig)
 		if err != nil {
 			return userConfig, err
 		}
 	}
+
 	// preserve this data if config file defines "config-file" as nil
 	if configFile != "" {
 		userConfig.ConfigFilePath = configFile
@@ -147,7 +149,6 @@ in a user friendly format`, binName, binName)
 	if userConfig.Timeout <= 0 {
 		return userConfig, errors.New("you must provide a timeout greater than 0")
 	}
-	setUserConfigRegion()
 	fmt.Fprintf(outputStream, "UserConfig: %v\n", userConfig)
 	return userConfig, nil
 }
@@ -167,16 +168,17 @@ func WriteUserConfig(filename string) error {
 
 // ReadUserConfig reads user config from config file.
 func ReadUserConfig(filename string) (UserConfig, error) {
+	result := UserConfig{}
 	configByteData, err := ioutil.ReadFile(filename)
 	if err != nil {
-		return userConfig, err
+		return result, err
 	}
-	err = json.Unmarshal(configByteData, &userConfig)
+	err = json.Unmarshal(configByteData, &result)
 	if err != nil {
 		fmt.Println("error while processing config file: ", err)
-		return userConfig, err
+		return result, err
 	}
-	return userConfig, nil
+	return result, nil
 }
 
 func getProfileRegion(profileName string) (string, error) {

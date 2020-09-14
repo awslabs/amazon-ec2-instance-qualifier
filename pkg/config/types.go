@@ -108,3 +108,46 @@ func (t TestFixture) CfnTemplateFilename() string {
 func (t TestFixture) AmiId() string {
 	return t.amiId
 }
+
+// SetUserConfig sets empty fields of UserConfig to reqConfig
+func (UserConfig) SetUserConfig(reqConfig UserConfig) {
+	if userConfig.InstanceTypes == "" {
+		userConfig.InstanceTypes = reqConfig.InstanceTypes
+	}
+	if userConfig.TestSuiteName == "" {
+		userConfig.TestSuiteName = reqConfig.TestSuiteName
+	}
+	if userConfig.TargetUtil <= 0 {
+		userConfig.TargetUtil = reqConfig.TargetUtil
+	}
+	if userConfig.VpcId == "" {
+		userConfig.VpcId = reqConfig.VpcId
+	}
+	if userConfig.SubnetId == "" {
+		userConfig.SubnetId = reqConfig.SubnetId
+	}
+	if userConfig.AmiId == "" {
+		userConfig.AmiId = reqConfig.AmiId
+	}
+	if userConfig.Timeout == defaultTimeout && reqConfig.Timeout > 0 {
+		userConfig.Timeout = reqConfig.Timeout
+	}
+	if userConfig.Persist != true {
+		userConfig.Persist = reqConfig.Persist
+	}
+	if userConfig.Profile == "" {
+		userConfig.Profile = reqConfig.Profile
+	}
+	if userConfig.Region == "" {
+		userConfig.Region = reqConfig.Region
+	}
+	if userConfig.Bucket == "" {
+		userConfig.Bucket = reqConfig.Bucket
+	}
+	if userConfig.CustomScriptPath == "" {
+		userConfig.CustomScriptPath = reqConfig.CustomScriptPath
+	}
+	if userConfig.ConfigFilePath == "" {
+		userConfig.ConfigFilePath = reqConfig.ConfigFilePath
+	}
+}
