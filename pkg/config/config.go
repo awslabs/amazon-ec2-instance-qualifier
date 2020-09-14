@@ -89,9 +89,9 @@ func ParseCliArgs(outputStream *os.File) (UserConfig, error) {
 Provided with a test suite and a list of EC2 instance types, %s will then
 run the input on all designated types, test against multiple metrics, and output the results
 in a user friendly format`, binName, binName)
-		examples := fmt.Sprintf(`./%s --instance-types=m4.large,c5.large,m4.xlarge --test-suite=path/to/test-folder --target-utilization=30 --vpc=vpc-294b9542 --subnet=subnet-4879bf23 --Timeout=2400
-./%s --instance-types=m4.xlarge,c1.large,c5.large --test-suite=path/to/test-folder --target-utilization=50 --Profile=default
-./%s --Bucket=qualifier-Bucket-123456789abcdef`, binName, binName, binName)
+		examples := fmt.Sprintf(`./%s --instance-types=m4.large,c5.large,m4.xlarge --test-suite=path/to/test-folder --target-utilization=30 --vpc=vpc-294b9542 --subnet=subnet-4879bf23 --timeout=2400
+./%s --instance-types=m4.xlarge,c1.large,c5.large --test-suite=path/to/test-folder --target-utilization=50 --profile=default
+./%s --bucket=qualifier-Bucket-123456789abcdef`, binName, binName, binName)
 		fmt.Fprintf(outputStream,
 			longUsage+"\n\n"+
 				"Usage:\n"+
@@ -145,10 +145,10 @@ in a user friendly format`, binName, binName)
 		}
 	}
 	if userConfig.Timeout <= 0 {
-		return userConfig, errors.New("you must provide a Timeout greater than 0")
+		return userConfig, errors.New("you must provide a timeout greater than 0")
 	}
 	setUserConfigRegion()
-	fmt.Fprintf(outputStream, "UserConfig after ALL: %v\n", userConfig)
+	fmt.Fprintf(outputStream, "UserConfig: %v\n", userConfig)
 	return userConfig, nil
 }
 
@@ -181,7 +181,7 @@ func ReadUserConfig(filename string) (UserConfig, error) {
 
 func getProfileRegion(profileName string) (string, error) {
 	if profileName != defaultProfile {
-		profileName = fmt.Sprintf("Profile %s", profileName)
+		profileName = fmt.Sprintf("profile %s", profileName)
 	}
 	awsConfigPath, err := homedir.Expand(awsConfigFile)
 	if err != nil {
@@ -193,11 +193,11 @@ func getProfileRegion(profileName string) (string, error) {
 	}
 	section, err := awsConfigIni.GetSection(profileName)
 	if err != nil {
-		return "", fmt.Errorf("Warning: there is no configuration for the specified aws Profile %s at %s", profileName, awsConfigPath)
+		return "", fmt.Errorf("Warning: there is no configuration for the specified aws profile %s at %s", profileName, awsConfigPath)
 	}
 	regionConfig, err := section.GetKey("Region")
 	if err != nil || regionConfig.String() == "" {
-		return "", fmt.Errorf("Warning: there is no Region configured for the specified aws Profile %s at %s", profileName, awsConfigPath)
+		return "", fmt.Errorf("Warning: there is no region configured for the specified aws profile %s at %s", profileName, awsConfigPath)
 	}
 	return regionConfig.String(), nil
 }
@@ -215,13 +215,13 @@ func setUserConfigRegion() {
 		} else if defaultRegion, ok := os.LookupEnv(defaultRegionEnvVar); ok && defaultRegion != "" {
 			userConfig.Region = defaultRegion
 		} else {
-			errorMsg := "Failed to determine Region from the following sources: \n"
-			errorMsg = errorMsg + "\t - --Region flag\n"
+			errorMsg := "Failed to determine region from the following sources: \n"
+			errorMsg = errorMsg + "\t - --region flag\n"
 			if userConfig.Profile != "" {
-				errorMsg = errorMsg + fmt.Sprintf("\t - Profile Region in %s\n", awsConfigFile)
+				errorMsg = errorMsg + fmt.Sprintf("\t - profile region in %s\n", awsConfigFile)
 			}
 			errorMsg = errorMsg + fmt.Sprintf("\t - %s environment variable\n", awsRegionEnvVar)
-			errorMsg = errorMsg + fmt.Sprintf("\t - default Profile Region in %s\n", awsConfigFile)
+			errorMsg = errorMsg + fmt.Sprintf("\t - default profile region in %s\n", awsConfigFile)
 			errorMsg = errorMsg + fmt.Sprintf("\t - %s environment variable\n", defaultRegionEnvVar)
 			fmt.Println(errorMsg)
 		}

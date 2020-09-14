@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+CONFIG_FILE=$SCRIPTPATH/testdata/test-folder_timeout_with_unsupported_instance_types/target-util-80-args.json
+
 function test() {
   cmd=$1
   instance_types=$2
@@ -19,7 +21,7 @@ function test() {
 
 test "$AEIQ_BIN --instance-types=$SUPPORTED_INSTANCE_TYPES --test-suite=${TEST_SUITE}_no_optional_flags --target-utilization=99 --custom-script=$CUSTOM_SCRIPT" "$SUPPORTED_INSTANCE_TYPES" "no_optional_flags" "target_util_99.golden" & pids+=($!)
 sleep 1
-test "$AEIQ_BIN --instance-types=$ALL_INSTANCE_TYPES --test-suite=${TEST_SUITE}_timeout_with_unsupported_instance_types --target-utilization=80 --subnet=$SUBNET_ID --timeout=125 --custom-script=$CUSTOM_SCRIPT" "$ALL_INSTANCE_TYPES" "timeout_with_unsupported_instance_types" "target_util_80_timeout.golden" & pids+=($!)
+test "$AEIQ_BIN --config-file=$CONFIG_FILE --test-suite=${TEST_SUITE}_timeout_with_unsupported_instance_types --subnet=$SUBNET_ID --custom-script=$CUSTOM_SCRIPT" "$ALL_INSTANCE_TYPES" "timeout_with_unsupported_instance_types" "target_util_80_timeout.golden" & pids+=($!)
 sleep 1
 test "$AEIQ_BIN --instance-types=$SUPPORTED_INSTANCE_TYPES --test-suite=${TEST_SUITE}_short_timeout --target-utilization=30 --vpc=$VPC_ID --subnet=$SUBNET_ID --timeout=5 --custom-script=$CUSTOM_SCRIPT" "$SUPPORTED_INSTANCE_TYPES" "short_timeout" "target_util_30_short_timeout.golden" & pids+=($!)
 

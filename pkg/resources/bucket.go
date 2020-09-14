@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/awslabs/amazon-ec2-instance-qualifier/pkg/config"
@@ -40,7 +41,18 @@ func (itf Resources) CreateBucket(runId string, outputStream *os.File) error {
 		Bucket: aws.String(bucket),
 	})
 	if err != nil {
-		return err
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			// proceed if bucket already exists or owned
+			case s3.ErrCodeBucketAlreadyExists:
+				fmt.Println(s3.ErrCodeBucketAlreadyExists, aerr.Error())
+			case s3.ErrCodeBucketAlreadyOwnedByYou:
+				fmt.Println(s3.ErrCodeBucketAlreadyOwnedByYou, aerr.Error())
+			default:
+				fmt.Println(aerr.Error())
+				return err
+			}
+		}
 	}
 
 	// Wait until exists
