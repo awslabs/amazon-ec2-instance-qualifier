@@ -266,7 +266,7 @@ func populateUserData(instance resources.Instance) string {
 		return ""
 	}
 	var customScript []byte
-	customScriptPath := userConfig.CustomScriptPath()
+	customScriptPath := userConfig.CustomScriptPath
 	if customScriptPath != "" {
 		customScript, err = ioutil.ReadFile(customScriptPath)
 		if err != nil {
@@ -292,7 +292,7 @@ func populateUserData(instance resources.Instance) string {
 		CompressedTestSuiteName: compressedTestSuiteName,
 		TestSuiteName:           testSuiteName,
 		CustomScript:            string(customScript),
-		Region:                  userConfig.Region(),
+		Region:                  userConfig.Region,
 	}
 	var byteBuffer bytes.Buffer
 	err = t.Execute(&byteBuffer, userScript)
