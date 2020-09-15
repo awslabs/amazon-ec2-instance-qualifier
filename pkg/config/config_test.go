@@ -56,12 +56,12 @@ func TestPopulateTestFixtureForNewRun(t *testing.T) {
 	resetTestFixture()
 	// For new run, bucketName should already be set before calling PopulateTestFixture
 	testFixture.bucketName = "BUCKET_NAME"
-	userConfig := UserConfig{
-		instanceTypes: "INSTANCE_TYPES",
-		testSuiteName: "TEST_SUITE_NAME",
-		targetUtil:    50,
-		timeout:       12345,
-		region:        "REGION",
+	userConfig = UserConfig{
+		InstanceTypes: "INSTANCE_TYPES",
+		TestSuiteName: "TEST_SUITE_NAME",
+		TargetUtil:    50,
+		Timeout:       12345,
+		Region:        "REGION",
 	}
 
 	err := PopulateTestFixture(userConfig, "RUN_ID", "AMI_ID")
@@ -86,9 +86,9 @@ func TestPopulateTestFixtureForNewRun(t *testing.T) {
 
 func TestPopulateTestFixtureForResumedRun(t *testing.T) {
 	resetTestFixture()
-	userConfig := UserConfig{
-		bucket:  "BUCKET_NAME",
-		timeout: 3600,
+	userConfig = UserConfig{
+		Bucket:  "BUCKET_NAME",
+		Timeout: 3600,
 	}
 
 	err := PopulateTestFixture(userConfig, "RUN_ID")
@@ -121,7 +121,7 @@ func TestParseCliArgsEnvSuccess(t *testing.T) {
 	userConfig, err := ParseCliArgs(outputStream)
 	h.Ok(t, err)
 
-	h.Equals(t, "us-weast-1", userConfig.Region())
+	h.Equals(t, "us-weast-1", userConfig.Region)
 }
 
 func TestParseCliArgsSuccess(t *testing.T) {
@@ -145,18 +145,42 @@ func TestParseCliArgsSuccess(t *testing.T) {
 	h.Ok(t, err)
 
 	// Assert all the values were set
-	h.Equals(t, "INSTANCE_TYPES", userConfig.InstanceTypes())
-	h.Equals(t, "TEST_SUITE", userConfig.TestSuiteName())
-	h.Equals(t, 30, userConfig.TargetUtil())
-	h.Equals(t, "VPC", userConfig.VpcId())
-	h.Equals(t, "SUBNET", userConfig.SubnetId())
-	h.Equals(t, "AMI", userConfig.AmiId())
-	h.Equals(t, 12345, userConfig.Timeout())
-	h.Equals(t, true, userConfig.Persist())
-	h.Equals(t, "PROFILE", userConfig.Profile())
-	h.Equals(t, "REGION", userConfig.Region())
-	h.Equals(t, "BUCKET", userConfig.Bucket())
-	h.Equals(t, "/path/to/script", userConfig.CustomScriptPath())
+	h.Equals(t, "INSTANCE_TYPES", userConfig.InstanceTypes)
+	h.Equals(t, "TEST_SUITE", userConfig.TestSuiteName)
+	h.Equals(t, 30, userConfig.TargetUtil)
+	h.Equals(t, "VPC", userConfig.VpcId)
+	h.Equals(t, "SUBNET", userConfig.SubnetId)
+	h.Equals(t, "AMI", userConfig.AmiId)
+	h.Equals(t, 12345, userConfig.Timeout)
+	h.Equals(t, true, userConfig.Persist)
+	h.Equals(t, "PROFILE", userConfig.Profile)
+	h.Equals(t, "REGION", userConfig.Region)
+	h.Equals(t, "BUCKET", userConfig.Bucket)
+	h.Equals(t, "/path/to/script", userConfig.CustomScriptPath)
+}
+
+func TestParseCliArgsPriority(t *testing.T) {
+	// Priority:
+	// 1. CLI Args
+	// 2. Env Vars
+	// 3. Config File
+	resetFlagsForTest()
+	os.Setenv("AWS_REGION", "us-weast-1")
+	os.Args = []string{
+		"cmd",
+		"--instance-types=INSTANCE_TYPES_Args",
+		"--test-suite=TEST_SUITE",
+		"--target-utilization=30",
+		"--config-file=../../test/static/UserConfigFiles/valid.config",
+	}
+	userConfig, err := ParseCliArgs(outputStream)
+	h.Ok(t, err)
+
+	h.Equals(t, "INSTANCE_TYPES_Args", userConfig.InstanceTypes)                             //Args
+	h.Equals(t, 30, userConfig.TargetUtil)                                                   //Args
+	h.Equals(t, "../../test/static/UserConfigFiles/valid.config", userConfig.ConfigFilePath) //Args
+	h.Equals(t, "us-weast-1", userConfig.Region)                                             //Env
+	h.Equals(t, 12345, userConfig.Timeout)                                                   //Config File
 }
 
 func TestParseCliArgsOnlyBucketSuccess(t *testing.T) {
@@ -168,7 +192,7 @@ func TestParseCliArgsOnlyBucketSuccess(t *testing.T) {
 	userConfig, err := ParseCliArgs(outputStream)
 	h.Ok(t, err)
 
-	h.Equals(t, "BUCKET", userConfig.Bucket())
+	h.Equals(t, "BUCKET", userConfig.Bucket)
 }
 
 func TestParseCliArgsOverrides(t *testing.T) {
@@ -191,16 +215,16 @@ func TestParseCliArgsOverrides(t *testing.T) {
 	h.Ok(t, err)
 
 	// Assert all the values were set
-	h.Equals(t, "INSTANCE_TYPES", userConfig.InstanceTypes())
-	h.Equals(t, "TEST_SUITE", userConfig.TestSuiteName())
-	h.Equals(t, 30, userConfig.TargetUtil())
-	h.Equals(t, "VPC", userConfig.VpcId())
-	h.Equals(t, "SUBNET", userConfig.SubnetId())
-	h.Equals(t, "AMI", userConfig.AmiId())
-	h.Equals(t, 12345, userConfig.Timeout())
-	h.Equals(t, true, userConfig.Persist())
-	h.Equals(t, "PROFILE", userConfig.Profile())
-	h.Equals(t, "REGION", userConfig.Region())
+	h.Equals(t, "INSTANCE_TYPES", userConfig.InstanceTypes)
+	h.Equals(t, "TEST_SUITE", userConfig.TestSuiteName)
+	h.Equals(t, 30, userConfig.TargetUtil)
+	h.Equals(t, "VPC", userConfig.VpcId)
+	h.Equals(t, "SUBNET", userConfig.SubnetId)
+	h.Equals(t, "AMI", userConfig.AmiId)
+	h.Equals(t, 12345, userConfig.Timeout)
+	h.Equals(t, true, userConfig.Persist)
+	h.Equals(t, "PROFILE", userConfig.Profile)
+	h.Equals(t, "REGION", userConfig.Region)
 }
 
 func TestParseCliArgsMissingInstanceTypesFailure(t *testing.T) {
@@ -273,22 +297,22 @@ func TestParseCliArgsNonPositiveTimeoutFailure(t *testing.T) {
 		"--timeout=0",
 	}
 	_, err := ParseCliArgs(outputStream)
-	h.Assert(t, err != nil, "Failed to return error when non-positive timeout provided")
+	h.Assert(t, err != nil, "Failed to return error when non-positive Timeout provided")
 }
 
 func TestWriteUserConfigSuccess(t *testing.T) {
 	actualConfigFile := "actual.config"
 	defer os.Remove(actualConfigFile)
-	userConfig := UserConfig{
-		instanceTypes: "INSTANCE_TYPES",
-		testSuiteName: "TEST_SUITE",
-		targetUtil:    50,
-		vpcId:         "VPC_ID",
-		timeout:       12345,
-		region:        "us-east-2",
+	userConfig = UserConfig{
+		InstanceTypes: "INSTANCE_TYPES",
+		TestSuiteName: "TEST_SUITE",
+		TargetUtil:    50,
+		VpcId:         "VPC_ID",
+		Timeout:       12345,
+		Region:        "us-east-2",
 	}
 
-	err := WriteUserConfig(userConfig, actualConfigFile)
+	err := WriteUserConfig(actualConfigFile)
 	h.Ok(t, err)
 
 	// Assert files contents are same
@@ -300,42 +324,42 @@ func TestWriteUserConfigSuccess(t *testing.T) {
 }
 
 func TestWriteUserConfigNonExistentFilePathFailure(t *testing.T) {
-	userConfig := UserConfig{
-		instanceTypes: "INSTANCE_TYPES",
-		testSuiteName: "TEST_SUITE",
-		targetUtil:    50,
-		timeout:       12345,
+	userConfig = UserConfig{
+		InstanceTypes: "INSTANCE_TYPES",
+		TestSuiteName: "TEST_SUITE",
+		TargetUtil:    50,
+		Timeout:       12345,
 	}
 
-	err := WriteUserConfig(userConfig, "non-existent-folder/CONFIG.config")
+	err := WriteUserConfig("non-existent-folder/CONFIG.config")
 	h.Assert(t, err != nil, "Failed to return error when file path doesn't exist")
 }
 
 func TestReadUserConfigSuccess(t *testing.T) {
 	expected := UserConfig{
-		instanceTypes: "INSTANCE_TYPES",
-		testSuiteName: "TEST_SUITE",
-		targetUtil:    50,
-		vpcId:         "VPC_ID",
-		timeout:       12345,
-		region:        "us-east-2",
+		InstanceTypes: "INSTANCE_TYPES",
+		TestSuiteName: "TEST_SUITE",
+		TargetUtil:    50,
+		VpcId:         "VPC_ID",
+		Timeout:       12345,
+		Region:        "us-east-2",
 	}
 
 	actual, err := ReadUserConfig(configFilesPath + "/valid.config")
 	h.Ok(t, err)
 
 	// Assert all fields are same
-	h.Equals(t, expected.InstanceTypes(), actual.InstanceTypes())
-	h.Equals(t, expected.TestSuiteName(), actual.TestSuiteName())
-	h.Equals(t, expected.TargetUtil(), actual.TargetUtil())
-	h.Equals(t, expected.VpcId(), actual.VpcId())
-	h.Equals(t, expected.SubnetId(), actual.SubnetId())
-	h.Equals(t, expected.AmiId(), actual.AmiId())
-	h.Equals(t, expected.Timeout(), actual.Timeout())
-	h.Equals(t, expected.Persist(), actual.Persist())
-	h.Equals(t, expected.Profile(), actual.Profile())
-	h.Equals(t, expected.Region(), actual.Region())
-	h.Equals(t, expected.Bucket(), actual.Bucket())
+	h.Equals(t, expected.InstanceTypes, actual.InstanceTypes)
+	h.Equals(t, expected.TestSuiteName, actual.TestSuiteName)
+	h.Equals(t, expected.TargetUtil, actual.TargetUtil)
+	h.Equals(t, expected.VpcId, actual.VpcId)
+	h.Equals(t, expected.SubnetId, actual.SubnetId)
+	h.Equals(t, expected.AmiId, actual.AmiId)
+	h.Equals(t, expected.Timeout, actual.Timeout)
+	h.Equals(t, expected.Persist, actual.Persist)
+	h.Equals(t, expected.Profile, actual.Profile)
+	h.Equals(t, expected.Region, actual.Region)
+	h.Equals(t, expected.Bucket, actual.Bucket)
 }
 
 func TestReadUserConfigNonExistentFileFailure(t *testing.T) {

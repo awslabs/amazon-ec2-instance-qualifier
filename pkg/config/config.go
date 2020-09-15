@@ -14,15 +14,13 @@
 package config
 
 import (
-	"bufio"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"gopkg.in/ini.v1"
@@ -52,17 +50,17 @@ func PopulateTestFixture(userConfig UserConfig, runId string, amiId ...string) (
 	testFixture.userConfigFilename = userConfigFilePrefix + testFixture.runId + ".config"
 	testFixture.cfnTemplateFilename = cfnTemplateFilePrefix + testFixture.runId + ".json"
 
-	if userConfig.bucket == "" { // new run
+	if userConfig.Bucket == "" { // new run
 		testFixture.amiId = amiId[0]
-		testFixture.testSuiteName, err = filepath.Abs(userConfig.testSuiteName)
+		testFixture.testSuiteName, err = filepath.Abs(userConfig.TestSuiteName)
 		if err != nil {
 			return err
 		}
 		testFixture.compressedTestSuiteName = testFixture.testSuiteName + compressSuffix
-		testFixture.targetUtil = userConfig.targetUtil
-		testFixture.timeout = userConfig.timeout
+		testFixture.targetUtil = userConfig.TargetUtil
+		testFixture.timeout = userConfig.Timeout
 	} else { // resumed run
-		testFixture.bucketName = userConfig.bucket
+		testFixture.bucketName = userConfig.Bucket
 	}
 
 	return nil
@@ -93,7 +91,7 @@ run the input on all designated types, test against multiple metrics, and output
 in a user friendly format`, binName, binName)
 		examples := fmt.Sprintf(`./%s --instance-types=m4.large,c5.large,m4.xlarge --test-suite=path/to/test-folder --target-utilization=30 --vpc=vpc-294b9542 --subnet=subnet-4879bf23 --timeout=2400
 ./%s --instance-types=m4.xlarge,c1.large,c5.large --test-suite=path/to/test-folder --target-utilization=50 --profile=default
-./%s --bucket=qualifier-bucket-123456789abcdef`, binName, binName, binName)
+./%s --bucket=qualifier-Bucket-123456789abcdef`, binName, binName, binName)
 		fmt.Fprintf(outputStream,
 			longUsage+"\n\n"+
 				"Usage:\n"+
@@ -104,128 +102,83 @@ in a user friendly format`, binName, binName)
 		flag.PrintDefaults()
 	}
 
-	flag.StringVar(&userConfig.instanceTypes, "instance-types", "", "[REQUIRED] comma-separated list of instance-types to test")
-	flag.StringVar(&userConfig.testSuiteName, "test-suite", "", "[REQUIRED] folder containing test files to execute")
-	flag.IntVar(&userConfig.targetUtil, "target-utilization", 0, "[REQUIRED] % of total resource used (CPU, Mem) benchmark (must be an integer). ex: 30 means instances using less than 30% CPU and Mem SUCCEED")
-	flag.StringVar(&userConfig.customScriptPath, "custom-script", "", "[OPTIONAL] path to Bash script to be executed on instance-types BEFORE agent runs test-suite and monitoring")
-	flag.StringVar(&userConfig.vpcId, "vpc", "", "[OPTIONAL] vpc id")
-	flag.StringVar(&userConfig.subnetId, "subnet", "", "[OPTIONAL] subnet id")
-	flag.StringVar(&userConfig.amiId, "ami", "", "[OPTIONAL] ami id")
-	flag.IntVar(&userConfig.timeout, "timeout", defaultTimeout, "[OPTIONAL] max seconds for test-suite execution on instances") // default value will be automatically appended
-	flag.BoolVar(&userConfig.persist, "persist", false, "[OPTIONAL] set to true if you'd like the tool to keep the CloudFormation stack after the run. Default is deleting the stack")
-	flag.StringVar(&userConfig.profile, "profile", "", "[OPTIONAL] AWS CLI profile to use for credentials and config")
-	flag.StringVar(&userConfig.region, "region", "", "[OPTIONAL] AWS Region to use for API requests")
-	flag.StringVar(&userConfig.bucket, "bucket", "", "[OPTIONAL] the name of the bucket created in the last run. When provided with this flag, the CLI won't create new resources, but try to grab test results from the bucket. If you provide this flag, you don't need to specify any required flags")
+	flag.StringVar(&userConfig.InstanceTypes, "instance-types", "", "[REQUIRED] comma-separated list of instance-types to test")
+	flag.StringVar(&userConfig.TestSuiteName, "test-suite", "", "[REQUIRED] folder containing test files to execute")
+	flag.IntVar(&userConfig.TargetUtil, "target-utilization", 0, "[REQUIRED] % of total resource used (CPU, Mem) benchmark (must be an integer). ex: 30 means instances using less than 30% CPU and Mem SUCCEED")
+	flag.StringVar(&userConfig.ConfigFilePath, "config-file", "", "[OPTIONAL] path to config file for cli input parameters in JSON")
+	flag.StringVar(&userConfig.CustomScriptPath, "custom-script", "", "[OPTIONAL] path to Bash script to be executed on instance-types BEFORE agent runs test-suite and monitoring")
+	flag.StringVar(&userConfig.VpcId, "vpc", "", "[OPTIONAL] vpc id")
+	flag.StringVar(&userConfig.SubnetId, "subnet", "", "[OPTIONAL] subnet id")
+	flag.StringVar(&userConfig.AmiId, "ami", "", "[OPTIONAL] ami id")
+	flag.IntVar(&userConfig.Timeout, "timeout", defaultTimeout, "[OPTIONAL] max seconds for test-suite execution on instances") // default value will be automatically appended
+	flag.BoolVar(&userConfig.Persist, "persist", false, "[OPTIONAL] set to true if you'd like the tool to keep the CloudFormation stack after the run. Default is deleting the stack")
+	flag.StringVar(&userConfig.Profile, "profile", "", "[OPTIONAL] AWS CLI Profile to use for credentials and config")
+	flag.StringVar(&userConfig.Region, "region", "", "[OPTIONAL] AWS Region to use for API requests")
+	flag.StringVar(&userConfig.Bucket, "bucket", "", "[OPTIONAL] the name of the Bucket created in the last run. When provided with this flag, the CLI won't create new resources, but try to grab test results from the Bucket. If you provide this flag, you don't need to specify any required flags")
 
 	flag.Parse()
+	setUserConfigRegion()
+
+	var configFile string
+	if userConfig.ConfigFilePath != "" {
+		configFile = userConfig.ConfigFilePath
+		tmpConfig, err := ReadUserConfig(userConfig.ConfigFilePath)
+		userConfig.SetUserConfig(tmpConfig)
+		if err != nil {
+			return userConfig, err
+		}
+	}
+
+	// preserve this data if config file defines "config-file" as nil
+	if configFile != "" {
+		userConfig.ConfigFilePath = configFile
+	}
 
 	// Validation
-	if userConfig.bucket == "" {
-		if userConfig.instanceTypes == "" {
+	if userConfig.Bucket == "" {
+		if userConfig.InstanceTypes == "" {
 			return userConfig, errors.New("you must provide a comma-separated list of instance-types")
 		}
-		if userConfig.targetUtil <= 0 {
+		if userConfig.TargetUtil <= 0 {
 			return userConfig, errors.New("you must provide a target-utilization greater than 0")
 		}
-		if userConfig.testSuiteName == "" {
+		if userConfig.TestSuiteName == "" {
 			return userConfig, errors.New("you must provide a folder containing test files to execute")
 		}
 	}
-	if userConfig.timeout <= 0 {
+	if userConfig.Timeout <= 0 {
 		return userConfig, errors.New("you must provide a timeout greater than 0")
 	}
-	setUserConfigRegion()
-
-	fmt.Fprintf(outputStream, "Configuration used: %v\n", userConfig)
-
+	fmt.Fprintf(outputStream, "UserConfig: %v\n", userConfig)
 	return userConfig, nil
 }
 
 // WriteUserConfig writes user config to config file.
-func WriteUserConfig(userConfig UserConfig, filename string) error {
-	file, err := os.Create(filename)
+func WriteUserConfig(filename string) error {
+	configJson, err := json.MarshalIndent(userConfig, "", "\t")
 	if err != nil {
 		return err
 	}
-	defer file.Close()
-
-	configString := fmt.Sprintf(`instance-types: %s
-test-suite: %s
-target-utilization: %d
-vpc: %s
-subnet: %s
-ami: %s
-timeout: %d
-persist: %v
-profile: %s
-region: %s
-bucket: %s`, userConfig.instanceTypes, userConfig.testSuiteName, userConfig.targetUtil, userConfig.vpcId, userConfig.subnetId,
-		userConfig.amiId, userConfig.timeout, userConfig.persist, userConfig.profile, userConfig.region, userConfig.bucket)
-	_, err = file.WriteString(configString)
+	err = ioutil.WriteFile(filename, configJson, 0644)
 	if err != nil {
 		return err
 	}
-	file.Sync()
-
 	return nil
 }
 
 // ReadUserConfig reads user config from config file.
-func ReadUserConfig(filename string) (userConfig UserConfig, err error) {
+func ReadUserConfig(filename string) (UserConfig, error) {
+	result := UserConfig{}
 	configByteData, err := ioutil.ReadFile(filename)
 	if err != nil {
-		return userConfig, err
+		return result, err
 	}
-
-	scanner := bufio.NewScanner(strings.NewReader(string(configByteData)))
-	for scanner.Scan() {
-		attr := strings.Split(scanner.Text(), ": ")
-		if len(attr) != 2 { // Check whether the line is a key-value pair
-			return userConfig, fmt.Errorf("invalid user config: %s", scanner.Text())
-		}
-		if err := populateUserConfig(&userConfig, attr[0], attr[1]); err != nil {
-			return userConfig, err
-		}
+	err = json.Unmarshal(configByteData, &result)
+	if err != nil {
+		fmt.Println("error while processing config file: ", err)
+		return result, err
 	}
-	if err := scanner.Err(); err != nil {
-		return userConfig, err
-	}
-
-	return userConfig, nil
-}
-
-// populateUserConfig populates one field of the UserConfig struct from a key-value pair.
-func populateUserConfig(userConfig *UserConfig, key string, value string) (err error) {
-	switch key {
-	case "instance-types":
-		userConfig.instanceTypes = value
-	case "test-suite":
-		userConfig.testSuiteName = value
-	case "target-utilization":
-		userConfig.targetUtil, err = strconv.Atoi(value)
-	case "custom-script":
-		userConfig.customScriptPath = value
-	case "vpc":
-		userConfig.vpcId = value
-	case "subnet":
-		userConfig.subnetId = value
-	case "ami":
-		userConfig.amiId = value
-	case "timeout":
-		userConfig.timeout, err = strconv.Atoi(value)
-	case "persist":
-		userConfig.persist, err = strconv.ParseBool(value)
-	case "profile":
-		userConfig.profile = value
-	case "region":
-		userConfig.region = value
-	case "bucket":
-		userConfig.bucket = value
-	default:
-		err = fmt.Errorf("unknown user config")
-	}
-
-	return err
+	return result, nil
 }
 
 func getProfileRegion(profileName string) (string, error) {
@@ -238,13 +191,13 @@ func getProfileRegion(profileName string) (string, error) {
 	}
 	awsConfigIni, err := ini.Load(awsConfigPath)
 	if err != nil {
-		return "", fmt.Errorf("Warning: unable to load aws config file for profile at path: %s", awsConfigPath)
+		return "", fmt.Errorf("Warning: unable to load aws config file for Profile at path: %s", awsConfigPath)
 	}
 	section, err := awsConfigIni.GetSection(profileName)
 	if err != nil {
 		return "", fmt.Errorf("Warning: there is no configuration for the specified aws profile %s at %s", profileName, awsConfigPath)
 	}
-	regionConfig, err := section.GetKey("region")
+	regionConfig, err := section.GetKey("Region")
 	if err != nil || regionConfig.String() == "" {
 		return "", fmt.Errorf("Warning: there is no region configured for the specified aws profile %s at %s", profileName, awsConfigPath)
 	}
@@ -252,21 +205,21 @@ func getProfileRegion(profileName string) (string, error) {
 }
 
 func setUserConfigRegion() {
-	if userConfig.region == "" {
-		if userConfig.profile != "" {
-			if profileRegion, err := getProfileRegion(userConfig.profile); err == nil {
-				userConfig.region = profileRegion
+	if userConfig.Region == "" {
+		if userConfig.Profile != "" {
+			if profileRegion, err := getProfileRegion(userConfig.Profile); err == nil {
+				userConfig.Region = profileRegion
 			}
 		} else if envRegion, ok := os.LookupEnv(awsRegionEnvVar); ok && envRegion != "" {
-			userConfig.region = envRegion
+			userConfig.Region = envRegion
 		} else if defaultProfileRegion, err := getProfileRegion(defaultProfile); err == nil {
-			userConfig.region = defaultProfileRegion
+			userConfig.Region = defaultProfileRegion
 		} else if defaultRegion, ok := os.LookupEnv(defaultRegionEnvVar); ok && defaultRegion != "" {
-			userConfig.region = defaultRegion
+			userConfig.Region = defaultRegion
 		} else {
 			errorMsg := "Failed to determine region from the following sources: \n"
 			errorMsg = errorMsg + "\t - --region flag\n"
-			if userConfig.profile != "" {
+			if userConfig.Profile != "" {
 				errorMsg = errorMsg + fmt.Sprintf("\t - profile region in %s\n", awsConfigFile)
 			}
 			errorMsg = errorMsg + fmt.Sprintf("\t - %s environment variable\n", awsRegionEnvVar)

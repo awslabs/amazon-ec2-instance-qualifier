@@ -101,7 +101,9 @@ Flags:
   -ami string
         [OPTIONAL] ami id
   -bucket string
-        [OPTIONAL] the name of the bucket created in the last run. When provided with this flag, the CLI won't create new resources, but try to grab test results from the bucket. If you provide this flag, you don't need to specify any required flags
+        [OPTIONAL] the name of the Bucket created in the last run. When provided with this flag, the CLI won't create new resources, but try to grab test results from the Bucket. If you provide this flag, you don't need to specify any required flags
+  -config-file string
+        [OPTIONAL] path to config file for cli input parameters in JSON
   -custom-script string
         [OPTIONAL] path to Bash script to be executed on instance-types BEFORE agent runs test-suite and monitoring
   -instance-types string
@@ -109,7 +111,7 @@ Flags:
   -persist
         [OPTIONAL] set to true if you'd like the tool to keep the CloudFormation stack after the run. Default is deleting the stack
   -profile string
-        [OPTIONAL] AWS CLI profile to use for credentials and config
+        [OPTIONAL] AWS CLI Profile to use for credentials and config
   -region string
         [OPTIONAL] AWS Region to use for API requests
   -subnet string

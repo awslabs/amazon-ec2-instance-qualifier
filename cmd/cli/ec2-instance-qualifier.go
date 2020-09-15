@@ -64,12 +64,12 @@ func main() {
 		terminate(sess, fmt.Errorf("interrupted"), deleteState)
 	}()
 
-	if userConfig.Bucket() == "" {
+	if userConfig.Bucket == "" {
 		// For a new run, before tests begin on all instances, if the CLI is interrupted, all resources should be
 		// deleted because it could be interpreted as "I don't want this run to be continued any more"
 		deleteState = deleteAll
 
-		vpcId, subnetId, err := svc.GetVpcAndSubnetIds(userConfig.VpcId(), userConfig.SubnetId(), inputStream, outputStream)
+		vpcId, subnetId, err := svc.GetVpcAndSubnetIds(userConfig.VpcId, userConfig.SubnetId, inputStream, outputStream)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -124,8 +124,8 @@ func main() {
 // newSession returns a session with user provided config.
 func newSession(userConfig config.UserConfig) (*session.Session, error) {
 	sessOpts := session.Options{}
-	region := userConfig.Region()
-	profile := userConfig.Profile()
+	region := userConfig.Region
+	profile := userConfig.Profile
 	if region != "" {
 		sessOpts.Config.Region = &region
 	}
@@ -146,7 +146,7 @@ func newSession(userConfig config.UserConfig) (*session.Session, error) {
 func prepareForNewRun(sess *session.Session, userConfig config.UserConfig, runId string, subnetId string, inputStream *os.File, outputStream *os.File) (cfnTemplate string, err error) {
 	svc := resources.New(sess)
 
-	amiId, err := svc.GetAmiId(userConfig.AmiId(), inputStream, outputStream)
+	amiId, err := svc.GetAmiId(userConfig.AmiId, inputStream, outputStream)
 	if err != nil {
 		return "", err
 	}
@@ -155,7 +155,7 @@ func prepareForNewRun(sess *session.Session, userConfig config.UserConfig, runId
 	}
 	testFixture := config.GetTestFixture()
 
-	availabilityZone, instanceTypes, err := svc.FindBestAvailabilityZone(userConfig.InstanceTypes(), subnetId)
+	availabilityZone, instanceTypes, err := svc.FindBestAvailabilityZone(userConfig.InstanceTypes, subnetId)
 	if err != nil {
 		return "", err
 	}
@@ -164,7 +164,7 @@ func prepareForNewRun(sess *session.Session, userConfig config.UserConfig, runId
 		return "", err
 	}
 
-	if err := config.WriteUserConfig(userConfig, testFixture.UserConfigFilename()); err != nil {
+	if err := config.WriteUserConfig(testFixture.UserConfigFilename()); err != nil {
 		return "", err
 	}
 	if err := uploadAndRemoveFile(sess, testFixture.BucketName(), testFixture.UserConfigFilename(), testFixture.UserConfigFilename()); err != nil {
@@ -178,7 +178,7 @@ func prepareForNewRun(sess *session.Session, userConfig config.UserConfig, runId
 		return "", err
 	}
 
-	cfnTemplate, err = template.GenerateCfnTemplate(instances, userConfig.InstanceTypes(), availabilityZone, inputStream, outputStream)
+	cfnTemplate, err = template.GenerateCfnTemplate(instances, userConfig.InstanceTypes, availabilityZone, inputStream, outputStream)
 	if err != nil {
 		return "", err
 	}
@@ -197,9 +197,9 @@ func prepareForNewRun(sess *session.Session, userConfig config.UserConfig, runId
 func prepareForResumedRun(sess *session.Session, userConfig config.UserConfig) (config.UserConfig, error) {
 	svc := resources.New(sess)
 
-	runId := resources.RemoveBucketNamePrefix(userConfig.Bucket())
+	runId := resources.RemoveBucketNamePrefix(userConfig.Bucket)
 	fmt.Printf("Test Run ID: %s\n", runId)
-	fmt.Printf("Bucket Used: %s\n", userConfig.Bucket())
+	fmt.Printf("Bucket Used: %s\n", userConfig.Bucket)
 	if err := config.PopulateTestFixture(userConfig, runId); err != nil {
 		return userConfig, err
 	}

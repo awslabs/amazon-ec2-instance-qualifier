@@ -15,18 +15,19 @@ package config
 
 // UserConfig contains configuration provided by the user, which remains unchanged throughout the entire run.
 type UserConfig struct {
-	instanceTypes    string
-	testSuiteName    string
-	targetUtil       int
-	vpcId            string
-	subnetId         string
-	amiId            string
-	timeout          int
-	persist          bool
-	profile          string
-	region           string
-	bucket           string
-	customScriptPath string
+	InstanceTypes    string `json:"instance-types"`
+	TestSuiteName    string `json:"test-suite"`
+	TargetUtil       int    `json:"target-utilization"`
+	VpcId            string `json:"vpc"`
+	SubnetId         string `json:"subnet"`
+	AmiId            string `json:"ami"`
+	Timeout          int    `json:"timeout"`
+	Persist          bool   `json:"persist"`
+	Profile          string `json:"profile"`
+	Region           string `json:"region"`
+	Bucket           string `json:"bucket"`
+	CustomScriptPath string `json:"custom-script"`
+	ConfigFilePath   string `json:"config-file"`
 }
 
 // TestFixture contains constant information for the entire run.
@@ -48,72 +49,12 @@ type TestFixture struct {
 var testFixture TestFixture
 var userConfig UserConfig
 
-// InstanceTypes returns instanceTypes.
-func (u UserConfig) InstanceTypes() string {
-	return u.instanceTypes
-}
-
-// TestSuiteName returns testSuiteName.
-func (u UserConfig) TestSuiteName() string {
-	return u.testSuiteName
-}
-
-// TargetUtil returns targetUtil.
-func (u UserConfig) TargetUtil() int {
-	return u.targetUtil
-}
-
-// CustomScriptPath returns customScriptPath.
-func (u UserConfig) CustomScriptPath() string {
-	return u.customScriptPath
-}
-
-// VpcId returns vpcId.
-func (u UserConfig) VpcId() string {
-	return u.vpcId
-}
-
-// SubnetId returns subnetId.
-func (u UserConfig) SubnetId() string {
-	return u.subnetId
-}
-
-// AmiId returns amiId.
-func (u UserConfig) AmiId() string {
-	return u.amiId
-}
-
-// Timeout returns timeout.
-func (u UserConfig) Timeout() int {
-	return u.timeout
-}
-
-// Persist returns persist.
-func (u UserConfig) Persist() bool {
-	return u.persist
-}
-
-// Profile returns profile.
-func (u UserConfig) Profile() string {
-	return u.profile
-}
-
-// Region returns region.
-func (u UserConfig) Region() string {
-	return u.region
-}
-
-// Bucket returns bucket.
-func (u UserConfig) Bucket() string {
-	return u.bucket
-}
-
 // RunId returns runId.
 func (t TestFixture) RunId() string {
 	return t.runId
 }
 
-// TestSuiteName returns testSuiteName.
+// TestSuiteName returns TestSuiteName.
 func (t TestFixture) TestSuiteName() string {
 	return t.testSuiteName
 }
@@ -133,12 +74,12 @@ func (t TestFixture) BucketRootDir() string {
 	return t.bucketRootDir
 }
 
-// TargetUtil returns targetUtil.
+// TargetUtil returns TargetUtil.
 func (t TestFixture) TargetUtil() int {
 	return t.targetUtil
 }
 
-// Timeout returns timeout.
+// Timeout returns Timeout.
 func (t TestFixture) Timeout() int {
 	return t.timeout
 }
@@ -163,7 +104,50 @@ func (t TestFixture) CfnTemplateFilename() string {
 	return t.cfnTemplateFilename
 }
 
-// AmiId returns amiId.
+// AmiId returns AmiId.
 func (t TestFixture) AmiId() string {
 	return t.amiId
+}
+
+// SetUserConfig sets empty fields of UserConfig to reqConfig
+func (UserConfig) SetUserConfig(reqConfig UserConfig) {
+	if userConfig.InstanceTypes == "" {
+		userConfig.InstanceTypes = reqConfig.InstanceTypes
+	}
+	if userConfig.TestSuiteName == "" {
+		userConfig.TestSuiteName = reqConfig.TestSuiteName
+	}
+	if userConfig.TargetUtil <= 0 {
+		userConfig.TargetUtil = reqConfig.TargetUtil
+	}
+	if userConfig.VpcId == "" {
+		userConfig.VpcId = reqConfig.VpcId
+	}
+	if userConfig.SubnetId == "" {
+		userConfig.SubnetId = reqConfig.SubnetId
+	}
+	if userConfig.AmiId == "" {
+		userConfig.AmiId = reqConfig.AmiId
+	}
+	if userConfig.Timeout == defaultTimeout && reqConfig.Timeout > 0 {
+		userConfig.Timeout = reqConfig.Timeout
+	}
+	if userConfig.Persist != true {
+		userConfig.Persist = reqConfig.Persist
+	}
+	if userConfig.Profile == "" {
+		userConfig.Profile = reqConfig.Profile
+	}
+	if userConfig.Region == "" {
+		userConfig.Region = reqConfig.Region
+	}
+	if userConfig.Bucket == "" {
+		userConfig.Bucket = reqConfig.Bucket
+	}
+	if userConfig.CustomScriptPath == "" {
+		userConfig.CustomScriptPath = reqConfig.CustomScriptPath
+	}
+	if userConfig.ConfigFilePath == "" {
+		userConfig.ConfigFilePath = reqConfig.ConfigFilePath
+	}
 }
