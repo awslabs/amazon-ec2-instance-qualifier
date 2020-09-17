@@ -31,6 +31,7 @@ func cleanup() {
 	os.Remove(testFolder + "/agent")
 	os.Remove(testFolder + "/monitor-cpu.sh")
 	os.Remove(testFolder + "/monitor-mem.sh")
+	os.Remove(testFolder + "/cwagent-config.json")
 }
 
 // Tests

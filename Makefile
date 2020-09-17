@@ -12,6 +12,7 @@ INSTANCE_TEMPLATE_VAR=github.com/awslabs/amazon-ec2-instance-qualifier/pkg/templ
 USER_DATA_TEMPLATE_VAR=github.com/awslabs/amazon-ec2-instance-qualifier/pkg/template.encodedUserData
 MONITOR_CPU_SCRIPT_VAR=github.com/awslabs/amazon-ec2-instance-qualifier/pkg/setup.encodedMonitorCpuScript
 MONITOR_MEM_SCRIPT_VAR=github.com/awslabs/amazon-ec2-instance-qualifier/pkg/setup.encodedMonitorMemScript
+CLOUDWATCH_AGENT_CONFIG_VAR=github.com/awslabs/amazon-ec2-instance-qualifier/pkg/setup.encodedCloudWatchAgentConfig
 ENCODED_MASTER_TEMPLATE=$(shell cat ${TEMPLATES_DIR_PATH}/master.template | base64 | tr -d '\040\011\012\015')
 ENCODED_LAUNCH_TEMPLATE_TEMPLATE=$(shell cat ${TEMPLATES_DIR_PATH}/launch-template.template | base64 | tr -d '\040\011\012\015')
 ENCODED_AUTO_SCALING_GROUP_TEMPLATE=$(shell cat ${TEMPLATES_DIR_PATH}/auto-scaling-group.template | base64 | tr -d '\040\011\012\015')
@@ -19,6 +20,7 @@ ENCODED_INSTANCE_TEMPLATE=$(shell cat ${TEMPLATES_DIR_PATH}/instance.template | 
 ENCODED_USER_DATA_TEMPLATE=$(shell cat ${TEMPLATES_DIR_PATH}/user-data.template | base64 | tr -d '\040\011\012\015')
 ENCODED_MONITOR_CPU_SCRIPT=$(shell cat ${SCRIPTS_DIR_PATH}/monitor-cpu.sh | base64 | tr -d '\040\011\012\015')
 ENCODED_MONITOR_MEM_SCRIPT=$(shell cat ${SCRIPTS_DIR_PATH}/monitor-mem.sh | base64 | tr -d '\040\011\012\015')
+ENCODED_CLOUDWATCH_AGENT_CONFIG=$(shell cat ${TEMPLATES_DIR_PATH}/cloudwatch-agent-config.json | base64 | tr -d '\040\011\012\015')
 
 $(shell mkdir -p ${BUILD_DIR_PATH} && touch ${BUILD_DIR_PATH}/_go.mod)
 
@@ -31,7 +33,7 @@ clean:
 
 compile:
 	@echo ${MAKEFILE_PATH}
-	go build -a -ldflags '-X "${MASTER_TEMPLATE_VAR}=${ENCODED_MASTER_TEMPLATE}" -X "${LAUNCH_TEMPLATE_TEMPLATE_VAR}=${ENCODED_LAUNCH_TEMPLATE_TEMPLATE}" -X "${AUTO_SCALING_GROUP_TEMPLATE_VAR}=${ENCODED_AUTO_SCALING_GROUP_TEMPLATE}" -X "${INSTANCE_TEMPLATE_VAR}=${ENCODED_INSTANCE_TEMPLATE}" -X "${MONITOR_CPU_SCRIPT_VAR}=${ENCODED_MONITOR_CPU_SCRIPT}" -X "${MONITOR_MEM_SCRIPT_VAR}=${ENCODED_MONITOR_MEM_SCRIPT}" -X "${USER_DATA_TEMPLATE_VAR}=${ENCODED_USER_DATA_TEMPLATE}"' -o ${BUILD_DIR_PATH}/${CLI_BINARY_NAME} ${MAKEFILE_PATH}/cmd/cli/ec2-instance-qualifier.go
+	go build -a -ldflags '-X "${MASTER_TEMPLATE_VAR}=${ENCODED_MASTER_TEMPLATE}" -X "${LAUNCH_TEMPLATE_TEMPLATE_VAR}=${ENCODED_LAUNCH_TEMPLATE_TEMPLATE}" -X "${AUTO_SCALING_GROUP_TEMPLATE_VAR}=${ENCODED_AUTO_SCALING_GROUP_TEMPLATE}" -X "${INSTANCE_TEMPLATE_VAR}=${ENCODED_INSTANCE_TEMPLATE}" -X "${MONITOR_CPU_SCRIPT_VAR}=${ENCODED_MONITOR_CPU_SCRIPT}" -X "${MONITOR_MEM_SCRIPT_VAR}=${ENCODED_MONITOR_MEM_SCRIPT}" -X "${USER_DATA_TEMPLATE_VAR}=${ENCODED_USER_DATA_TEMPLATE}" -X "${CLOUDWATCH_AGENT_CONFIG_VAR}=${ENCODED_CLOUDWATCH_AGENT_CONFIG}"' -o ${BUILD_DIR_PATH}/${CLI_BINARY_NAME} ${MAKEFILE_PATH}/cmd/cli/ec2-instance-qualifier.go
 	env GOOS=linux GOARCH=amd64 go build -o ${BUILD_DIR_PATH}/${AGENT_BINARY_NAME} ${MAKEFILE_PATH}/cmd/agent/agent.go
 	cp -p ${BUILD_DIR_PATH}/${AGENT_BINARY_NAME} ${MAKEFILE_PATH}/${AGENT_BINARY_NAME}
 

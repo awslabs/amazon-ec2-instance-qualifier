@@ -116,9 +116,9 @@ in a user friendly format`, binName, binName)
 	flag.StringVar(&userConfig.Region, "region", "", "[OPTIONAL] AWS Region to use for API requests")
 	flag.StringVar(&userConfig.Bucket, "bucket", "", "[OPTIONAL] the name of the Bucket created in the last run. When provided with this flag, the CLI won't create new resources, but try to grab test results from the Bucket. If you provide this flag, you don't need to specify any required flags")
 
+	// Apply config with precedence: cli args, env vars, config file
 	flag.Parse()
 	setUserConfigRegion()
-
 	var configFile string
 	if userConfig.ConfigFilePath != "" {
 		configFile = userConfig.ConfigFilePath
@@ -127,6 +127,18 @@ in a user friendly format`, binName, binName)
 		if err != nil {
 			return userConfig, err
 		}
+	}
+
+	if userConfig.Region == "" {
+		errorMsg := "Failed to determine region from the following sources: \n"
+		errorMsg = errorMsg + "\t - --region flag\n"
+		if userConfig.Profile != "" {
+			errorMsg = errorMsg + fmt.Sprintf("\t - profile region in %s\n", awsConfigFile)
+		}
+		errorMsg = errorMsg + fmt.Sprintf("\t - %s environment variable\n", awsRegionEnvVar)
+		errorMsg = errorMsg + fmt.Sprintf("\t - default profile region in %s\n", awsConfigFile)
+		errorMsg = errorMsg + fmt.Sprintf("\t - %s environment variable\n", defaultRegionEnvVar)
+		return userConfig, fmt.Errorf(errorMsg)
 	}
 
 	// preserve this data if config file defines "config-file" as nil
@@ -216,16 +228,6 @@ func setUserConfigRegion() {
 			userConfig.Region = defaultProfileRegion
 		} else if defaultRegion, ok := os.LookupEnv(defaultRegionEnvVar); ok && defaultRegion != "" {
 			userConfig.Region = defaultRegion
-		} else {
-			errorMsg := "Failed to determine region from the following sources: \n"
-			errorMsg = errorMsg + "\t - --region flag\n"
-			if userConfig.Profile != "" {
-				errorMsg = errorMsg + fmt.Sprintf("\t - profile region in %s\n", awsConfigFile)
-			}
-			errorMsg = errorMsg + fmt.Sprintf("\t - %s environment variable\n", awsRegionEnvVar)
-			errorMsg = errorMsg + fmt.Sprintf("\t - default profile region in %s\n", awsConfigFile)
-			errorMsg = errorMsg + fmt.Sprintf("\t - %s environment variable\n", defaultRegionEnvVar)
-			fmt.Println(errorMsg)
 		}
 	}
 }
