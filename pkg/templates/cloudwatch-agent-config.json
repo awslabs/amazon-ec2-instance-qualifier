@@ -1,7 +1,7 @@
 {
 	"agent": {
 		"metrics_collection_interval": 30,
-		"run_as_user": "root"
+		"run_as_user": "cwagent"
 	},
 	"metrics": {
 		"append_dimensions": {
