@@ -150,7 +150,7 @@ func Fatal(sess *session.Session, agentFixture AgentFixture, err error) {
 
 func isValidTestFile(file os.FileInfo) bool {
 	filename := file.Name()
-	if file.IsDir() || setup.IsInstanceQualifierScript(filename) || strings.HasSuffix(filename, ".load") || strings.HasSuffix(filename, ".json") || strings.HasSuffix(filename, ".log") {
+	if file.IsDir() || setup.IsInstanceQualifierScript(filename) || strings.HasSuffix(filename, ".load") || strings.HasSuffix(filename, ".json") || strings.HasSuffix(filename, ".log") || strings.HasSuffix(filename, ".rpm") {
 		return false
 	}
 	return true

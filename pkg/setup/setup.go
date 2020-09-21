@@ -24,15 +24,17 @@ import (
 )
 
 const (
-	agentBin           = "agent"
-	monitorCpuFilename = "monitor-cpu.sh"
-	monitorMemFilename = "monitor-mem.sh"
+	agentBin                  = "agent"
+	monitorCpuFilename        = "monitor-cpu.sh"
+	monitorMemFilename        = "monitor-mem.sh"
+	cloudWatchAgentConfigName = "cwagent-config.json"
 )
 
 // DO NOT EDIT: these values are populated by the Makefile
 var (
-	encodedMonitorCpuScript string
-	encodedMonitorMemScript string
+	encodedMonitorCpuScript      string
+	encodedMonitorMemScript      string
+	encodedCloudWatchAgentConfig string
 )
 
 // SetTestSuite copies agent scripts to test suite, compresses test suite into a tarball, then removes agent
@@ -55,7 +57,7 @@ func SetTestSuite() error {
 
 // IsInstanceQualifierScript checks whether a file is an internal script file of the instance-qualifier.
 func IsInstanceQualifierScript(filename string) bool {
-	if filename == agentBin || filename == monitorCpuFilename || filename == monitorMemFilename {
+	if filename == agentBin || filename == monitorCpuFilename || filename == monitorMemFilename || filename == cloudWatchAgentConfigName {
 		return true
 	}
 	return false
@@ -70,11 +72,18 @@ func copyAgentScriptsToTestSuite(testSuiteName string) error {
 	if err != nil {
 		return err
 	}
+	cloudWatchAgentConfig, err := cmdutil.DecodeBase64(encodedCloudWatchAgentConfig)
+	if err != nil {
+		return err
+	}
 
 	if err := ioutil.WriteFile(testSuiteName+"/"+monitorCpuFilename, []byte(monitorCpuScript), 0644); err != nil {
 		return err
 	}
 	if err := ioutil.WriteFile(testSuiteName+"/"+monitorMemFilename, []byte(monitorMemScript), 0644); err != nil {
+		return err
+	}
+	if err := ioutil.WriteFile(testSuiteName+"/"+cloudWatchAgentConfigName, []byte(cloudWatchAgentConfig), 0644); err != nil {
 		return err
 	}
 
@@ -114,7 +123,7 @@ func removeAgentScriptsFromTestSuite(testSuiteName string) error {
 		}
 	}
 	if err == nil {
-		log.Printf("%s successfully cleand up\n", testSuiteName)
+		log.Printf("%s successfully cleaned up\n", testSuiteName)
 	}
 
 	return nil

@@ -26,7 +26,24 @@ for file in *; do
 		chmod u+x "$file"
 	fi
 done
+
+cwa_arch=amd64
+if [[ "$ARCHITECTURE" != x86_64 ]]; then
+    cwa_arch=arm64
+fi
+
+cwa_plat=amazon_linux
+if [[ "$OS_VERSION" != Linux/UNIX ]]; then
+    cwa_plat=redhat
+fi
+
+wget https://s3."$REGION".amazonaws.com/amazoncloudwatch-agent-"$REGION"/"$cwa_plat"/"$cwa_arch"/latest/amazon-cloudwatch-agent.rpm
+sudo rpm -U ./amazon-cloudwatch-agent.rpm
+sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:./cwagent-config.json
+sleep 1
+
 cd ../..
+
 chown -R qualifier instance-qualifier
 chmod u+s /sbin/shutdown
 sudo -i -u qualifier bash << EOF
