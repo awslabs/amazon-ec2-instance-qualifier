@@ -15,6 +15,7 @@ package resources
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -104,6 +105,21 @@ func (itf Resources) UploadToBucket(bucket string, localPath string, remotePath 
 	return nil
 }
 
+// UploadToS3 is similar to UploadToBucket, but provide data directly instead of a local file
+func (itf Resources) UploadToS3(bucketName string, data io.Reader, remotePath string) error {
+
+	_, err := itf.S3ManagerUploader.Upload(&s3manager.UploadInput{
+		Bucket: aws.String(bucketName),
+		Key:    aws.String(remotePath),
+		Body:   data,
+	})
+	if err != nil {
+		return err
+	}
+	log.Printf("data successfully uploaded to s3://%s/%s\n", bucketName, remotePath)
+	return nil
+}
+
 // DownloadFromBucket downloads a file from the bucket to the specified local location.
 func (itf Resources) DownloadFromBucket(bucket string, localPath string, remotePath string) error {
 	// Should first check whether the file exists in the bucket, otherwise we may create useless empty local file
@@ -134,9 +150,33 @@ func (itf Resources) DownloadFromBucket(bucket string, localPath string, remoteP
 	return nil
 }
 
+// DownloadFromS3 is similar to DownloadFromBucket, but returns bytes directly instead of saving to a local file
+func (itf Resources) DownloadFromS3(bucketName string, remotePath string) ([]byte, error) {
+	_, err := itf.S3.HeadObject(&s3.HeadObjectInput{
+		Bucket: aws.String(bucketName),
+		Key:    aws.String(remotePath),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	buf := aws.NewWriteAtBuffer([]byte{})
+
+	_, err = itf.S3ManagerDownloader.Download(buf,
+		&s3.GetObjectInput{
+			Bucket: aws.String(bucketName),
+			Key:    aws.String(remotePath),
+		})
+	if err != nil {
+		return buf.Bytes(), err
+	}
+	log.Printf("data successfully downloaded from s3://%s/%s\n", bucketName, remotePath)
+	return buf.Bytes(), nil
+}
+
 // DeleteBucket empties and deletes the instance-qualifier bucket.
 func (itf Resources) DeleteBucket() error {
-	bucket := config.GetTestFixture().BucketName()
+	bucket := config.GetTestFixture().BucketName
 
 	// First delete all objects
 	iter := s3manager.NewDeleteListIterator(itf.S3, &s3.ListObjectsInput{

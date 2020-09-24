@@ -57,13 +57,13 @@ func GenerateCfnTemplate(instances []resources.Instance, allInstanceTypes string
 		return "", err
 	}
 
-	launchTemplateTemplate, err := populateLaunchTemplateTemplate(instances, allInstanceTypes, testFixture.AmiId(), inputStream, outputStream)
+	launchTemplateTemplate, err := populateLaunchTemplateTemplate(instances, allInstanceTypes, testFixture.AmiId, inputStream, outputStream)
 	if err != nil {
 		return "", err
 	}
 	template = appendTemplate(template, launchTemplateTemplate)
 
-	autoScalingGroupTemplate, err := populateAutoScalingGroupTemplate(len(instances), testFixture.Timeout())
+	autoScalingGroupTemplate, err := populateAutoScalingGroupTemplate(len(instances), testFixture.Timeout)
 	if err != nil {
 		return "", err
 	}
@@ -258,8 +258,8 @@ func populateInstanceTemplate(instanceNum int) (template string, err error) {
 func populateUserData(instance resources.Instance) string {
 	testFixture := config.GetTestFixture()
 	userConfig := config.GetUserConfig()
-	testSuiteName := filepath.Base(testFixture.TestSuiteName())
-	compressedTestSuiteName := filepath.Base(testFixture.CompressedTestSuiteName())
+	testSuiteName := filepath.Base(testFixture.TestSuiteName)
+	compressedTestSuiteName := filepath.Base(testFixture.CompressedTestSuiteName)
 	userDataTemplate, err := cmdutil.DecodeBase64(encodedUserData)
 	if err != nil {
 		log.Println("Error decoding user data: ", err)
@@ -285,10 +285,10 @@ func populateUserData(instance resources.Instance) string {
 		Memory:                  instance.Memory,
 		Os:                      instance.Os,
 		Architecture:            instance.Architecture,
-		BucketName:              testFixture.BucketName(),
-		Timeout:                 fmt.Sprint(testFixture.Timeout()),
-		BucketRootDir:           testFixture.BucketRootDir(),
-		TargetUtil:              fmt.Sprint(testFixture.TargetUtil()),
+		BucketName:              testFixture.BucketName,
+		Timeout:                 fmt.Sprint(testFixture.Timeout),
+		BucketRootDir:           testFixture.BucketRootDir,
+		TargetUtil:              fmt.Sprint(testFixture.TargetUtil),
 		CompressedTestSuiteName: compressedTestSuiteName,
 		TestSuiteName:           testSuiteName,
 		CustomScript:            string(customScript),

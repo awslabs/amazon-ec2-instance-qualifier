@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"time"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"gopkg.in/ini.v1"
@@ -43,25 +44,31 @@ const (
 
 // PopulateTestFixture populates the test fixture which contains constant information for the entire run.
 func PopulateTestFixture(userConfig UserConfig, runId string, amiId ...string) (err error) {
-	testFixture.runId = runId
-	testFixture.bucketRootDir = bucketRootDirPrefix + testFixture.runId
-	testFixture.cfnStackName = cfnStackNamePrefix + testFixture.runId
-	testFixture.finalResultFilename = finalResultPrefix + testFixture.runId + ".json"
-	testFixture.userConfigFilename = userConfigFilePrefix + testFixture.runId + ".config"
-	testFixture.cfnTemplateFilename = cfnTemplateFilePrefix + testFixture.runId + ".json"
-
-	if userConfig.Bucket == "" { // new run
-		testFixture.amiId = amiId[0]
-		testFixture.testSuiteName, err = filepath.Abs(userConfig.TestSuiteName)
-		if err != nil {
-			return err
-		}
-		testFixture.compressedTestSuiteName = testFixture.testSuiteName + compressSuffix
-		testFixture.targetUtil = userConfig.TargetUtil
-		testFixture.timeout = userConfig.Timeout
-	} else { // resumed run
-		testFixture.bucketName = userConfig.Bucket
+	testFixture.RunId = runId
+	testFixture.BucketRootDir = bucketRootDirPrefix + testFixture.RunId
+	testFixture.CfnStackName = cfnStackNamePrefix + testFixture.RunId
+	testFixture.FinalResultFilename = finalResultPrefix + testFixture.RunId + ".json"
+	testFixture.UserConfigFilename = userConfigFilePrefix + testFixture.RunId + ".config"
+	testFixture.CfnTemplateFilename = cfnTemplateFilePrefix + testFixture.RunId + ".json"
+	testFixture.AmiId = amiId[0]
+	testFixture.TestSuiteName, err = filepath.Abs(userConfig.TestSuiteName)
+	if err != nil {
+		return err
 	}
+	testFixture.CompressedTestSuiteName = testFixture.TestSuiteName + compressSuffix
+	testFixture.TargetUtil = userConfig.TargetUtil
+	testFixture.Timeout = userConfig.Timeout
+	testFixture.StartTime = time.Now().Format(time.RFC3339)
+
+	return nil
+}
+
+// RestoreTestFixture populates the test fixture from a previous state
+func RestoreTestFixture(data []byte) (err error) {
+	if err := json.Unmarshal(data, &testFixture); err != nil {
+		return err
+	}
+	fmt.Printf("Restored test fixture to: %v\n", testFixture)
 
 	return nil
 }
@@ -78,7 +85,7 @@ func GetUserConfig() UserConfig {
 
 // SetTestFixtureBucketName sets bucketName of testFixture.
 func SetTestFixtureBucketName(bucketName string) {
-	testFixture.bucketName = bucketName
+	testFixture.BucketName = bucketName
 }
 
 // ParseCliArgs parses CLI arguments and uses environment variables as fallback values for some flags.

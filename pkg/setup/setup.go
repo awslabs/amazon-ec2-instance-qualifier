@@ -41,13 +41,13 @@ var (
 // scripts from test suite.
 func SetTestSuite() error {
 	testFixture := config.GetTestFixture()
-	if err := copyAgentScriptsToTestSuite(testFixture.TestSuiteName()); err != nil {
+	if err := copyAgentScriptsToTestSuite(testFixture.TestSuiteName); err != nil {
 		return err
 	}
-	if err := cmdutil.Compress(testFixture.TestSuiteName(), testFixture.CompressedTestSuiteName()); err != nil {
+	if err := cmdutil.Compress(testFixture.TestSuiteName, testFixture.CompressedTestSuiteName); err != nil {
 		return err
 	}
-	if err := removeAgentScriptsFromTestSuite(testFixture.TestSuiteName()); err != nil {
+	if err := removeAgentScriptsFromTestSuite(testFixture.TestSuiteName); err != nil {
 		// Failing to remove is a not fatal error
 		log.Println(err)
 	}
