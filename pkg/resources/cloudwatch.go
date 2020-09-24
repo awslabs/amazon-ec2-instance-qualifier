@@ -22,6 +22,7 @@ import (
 	"github.com/awslabs/amazon-ec2-instance-qualifier/pkg/config"
 )
 
+// GetCloudWatchData retrieves instance metric data from CloudWatch
 func (itf Resources) GetCloudWatchData(instances []Instance, testFixture config.TestFixture) (*cloudwatch.GetMetricDataOutput, error) {
 	startTime, _ := time.Parse(time.RFC3339, testFixture.StartTime)
 	duration := time.Duration(testFixture.Timeout) * time.Second

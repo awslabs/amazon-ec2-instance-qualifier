@@ -36,16 +36,16 @@ var globalInstanceResult = resources.Instance{
 			ExecutionTime: "120.029",
 			Metrics: []resources.Metric{
 				{
-					MetricUsed: "cpu-load",
-					Value:      1.22717948,
-					Threshold:  1.6,
-					Unit:       "n",
+					MetricUsed: "cpu_usage_active",
+					Value:      35.8,
+					Threshold:  40.0,
+					Unit:       "Percent",
 				},
 				{
-					MetricUsed: "mem-used",
-					Value:      91.1025641025,
-					Threshold:  6553.6,
-					Unit:       "MiB",
+					MetricUsed: "mem_used_percent",
+					Value:      1.48,
+					Threshold:  40.0,
+					Unit:       "Percent",
 				},
 			},
 		},
@@ -55,16 +55,16 @@ var globalInstanceResult = resources.Instance{
 			ExecutionTime: "10.725",
 			Metrics: []resources.Metric{
 				{
-					MetricUsed: "cpu-load",
-					Value:      1.523333333,
-					Threshold:  1.6,
-					Unit:       "n",
+					MetricUsed: "cpu_usage_active",
+					Value:      10.523333333,
+					Threshold:  40.0,
+					Unit:       "Percent",
 				},
 				{
-					MetricUsed: "mem-used",
-					Value:      3195,
-					Threshold:  6553.6,
-					Unit:       "MiB",
+					MetricUsed: "mem_used_percent",
+					Value:      37.77,
+					Threshold:  40.0,
+					Unit:       "Percent",
 				},
 			},
 		},
@@ -85,7 +85,7 @@ func deepCopy(src resources.Instance, t *testing.T) (dest resources.Instance) {
 
 func TestParseInstanceResultToRow_StatusSuccess_AllPass(t *testing.T) {
 	instanceResult := deepCopy(globalInstanceResult, t)
-	expected := []string{"m4.large", "SUCCESS", "1.523", "76", "3195", "39", "true", "130.754"}
+	expected := []string{"m4.large", "SUCCESS", "10.523", "37.770", "true", "130.754"}
 
 	actual, err := parseInstanceResultToRow(instanceResult)
 	h.Ok(t, err)
@@ -94,8 +94,8 @@ func TestParseInstanceResultToRow_StatusSuccess_AllPass(t *testing.T) {
 
 func TestParseInstanceResultToRow_StatusFail_AllPass(t *testing.T) {
 	instanceResult := deepCopy(globalInstanceResult, t)
-	instanceResult.Results[1].Metrics[0].Value = 1.623
-	expected := []string{"m4.large", "FAIL", "1.623", "81", "3195", "39", "true", "130.754"}
+	instanceResult.Results[1].Metrics[0].Value = 41.623
+	expected := []string{"m4.large", "FAIL", "41.623", "37.770", "true", "130.754"}
 
 	actual, err := parseInstanceResultToRow(instanceResult)
 	h.Ok(t, err)
@@ -105,7 +105,7 @@ func TestParseInstanceResultToRow_StatusFail_AllPass(t *testing.T) {
 func TestParseInstanceResultToRow_StatusSuccess_NotAllPass(t *testing.T) {
 	instanceResult := deepCopy(globalInstanceResult, t)
 	instanceResult.Results[1].Status = "fail"
-	expected := []string{"m4.large", "SUCCESS", "1.523", "76", "3195", "39", "false", "130.754"}
+	expected := []string{"m4.large", "SUCCESS", "10.523", "37.770", "false", "130.754"}
 
 	actual, err := parseInstanceResultToRow(instanceResult)
 	h.Ok(t, err)
@@ -114,9 +114,9 @@ func TestParseInstanceResultToRow_StatusSuccess_NotAllPass(t *testing.T) {
 
 func TestParseInstanceResultToRow_StatusFail_Timeout(t *testing.T) {
 	instanceResult := deepCopy(globalInstanceResult, t)
-	instanceResult.Results[1].Metrics[1].Value = 7000
+	instanceResult.Results[1].Metrics[1].Value = 45.456
 	instanceResult.IsTimeout = true
-	expected := []string{"m4.large", "FAIL", "1.523", "76", "7000", "85", "false", "130.754"}
+	expected := []string{"m4.large", "FAIL", "10.523", "45.456", "false", "130.754"}
 
 	actual, err := parseInstanceResultToRow(instanceResult)
 	h.Ok(t, err)
@@ -129,20 +129,4 @@ func TestParseInstanceResultToRowInvalidExecutionTimeFailure(t *testing.T) {
 
 	_, err := parseInstanceResultToRow(instanceResult)
 	h.Assert(t, err != nil, "Failed to return error when ExecutionTime is invalid")
-}
-
-func TestParseInstanceResultToRowInvalidVCpusFailure(t *testing.T) {
-	instanceResult := deepCopy(globalInstanceResult, t)
-	instanceResult.VCpus = "VCPUS"
-
-	_, err := parseInstanceResultToRow(instanceResult)
-	h.Assert(t, err != nil, "Failed to return error when VCpus is invalid")
-}
-
-func TestParseInstanceResultToRowInvalidMemoryFailure(t *testing.T) {
-	instanceResult := deepCopy(globalInstanceResult, t)
-	instanceResult.Memory = "MEMORY"
-
-	_, err := parseInstanceResultToRow(instanceResult)
-	h.Assert(t, err != nil, "Failed to return error when Memory is invalid")
 }

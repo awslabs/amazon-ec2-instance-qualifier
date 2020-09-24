@@ -14,6 +14,7 @@
 package config
 
 import (
+	"encoding/json"
 	"flag"
 	"io/ioutil"
 	"os"
@@ -31,18 +32,18 @@ var outputStream = os.Stdout
 // Helpers
 
 func resetTestFixture() {
-	testFixture.runId = ""
-	testFixture.testSuiteName = ""
-	testFixture.compressedTestSuiteName = ""
-	testFixture.bucketName = ""
-	testFixture.bucketRootDir = ""
-	testFixture.targetUtil = 0
-	testFixture.timeout = 0
-	testFixture.cfnStackName = ""
-	testFixture.finalResultFilename = ""
-	testFixture.userConfigFilename = ""
-	testFixture.cfnTemplateFilename = ""
-	testFixture.amiId = ""
+	testFixture.RunId = ""
+	testFixture.TestSuiteName = ""
+	testFixture.CompressedTestSuiteName = ""
+	testFixture.BucketName = ""
+	testFixture.BucketRootDir = ""
+	testFixture.TargetUtil = 0
+	testFixture.Timeout = 0
+	testFixture.CfnStackName = ""
+	testFixture.FinalResultFilename = ""
+	testFixture.UserConfigFilename = ""
+	testFixture.CfnTemplateFilename = ""
+	testFixture.AmiId = ""
 }
 
 func resetFlagsForTest() {
@@ -55,7 +56,7 @@ func resetFlagsForTest() {
 func TestPopulateTestFixtureForNewRun(t *testing.T) {
 	resetTestFixture()
 	// For new run, bucketName should already be set before calling PopulateTestFixture
-	testFixture.bucketName = "BUCKET_NAME"
+	testFixture.BucketName = "BUCKET_NAME"
 	userConfig = UserConfig{
 		InstanceTypes: "INSTANCE_TYPES",
 		TestSuiteName: "TEST_SUITE_NAME",
@@ -70,43 +71,47 @@ func TestPopulateTestFixtureForNewRun(t *testing.T) {
 	cwd, err := os.Getwd()
 	h.Assert(t, err == nil, "Error getting the working directory")
 	// Assert all the values were set
-	h.Equals(t, "RUN_ID", testFixture.RunId())
-	h.Equals(t, cwd+"/TEST_SUITE_NAME", testFixture.TestSuiteName())
-	h.Equals(t, cwd+"/TEST_SUITE_NAME.tar.gz", testFixture.CompressedTestSuiteName())
-	h.Equals(t, "BUCKET_NAME", testFixture.BucketName())
-	h.Equals(t, "Instance-Qualifier-Run-RUN_ID", testFixture.BucketRootDir())
-	h.Equals(t, 50, testFixture.TargetUtil())
-	h.Equals(t, 12345, testFixture.Timeout())
-	h.Equals(t, "qualifier-stack-RUN_ID", testFixture.CfnStackName())
-	h.Equals(t, "final-results-RUN_ID.json", testFixture.FinalResultFilename())
-	h.Equals(t, "instance-qualifier-RUN_ID.config", testFixture.UserConfigFilename())
-	h.Equals(t, "qualifier-cfn-template-RUN_ID.json", testFixture.CfnTemplateFilename())
-	h.Equals(t, "AMI_ID", testFixture.AmiId())
+	h.Equals(t, "RUN_ID", testFixture.RunId)
+	h.Equals(t, cwd+"/TEST_SUITE_NAME", testFixture.TestSuiteName)
+	h.Equals(t, cwd+"/TEST_SUITE_NAME.tar.gz", testFixture.CompressedTestSuiteName)
+	h.Equals(t, "BUCKET_NAME", testFixture.BucketName)
+	h.Equals(t, "Instance-Qualifier-Run-RUN_ID", testFixture.BucketRootDir)
+	h.Equals(t, 50, testFixture.TargetUtil)
+	h.Equals(t, 12345, testFixture.Timeout)
+	h.Equals(t, "qualifier-stack-RUN_ID", testFixture.CfnStackName)
+	h.Equals(t, "final-results-RUN_ID.json", testFixture.FinalResultFilename)
+	h.Equals(t, "instance-qualifier-RUN_ID.config", testFixture.UserConfigFilename)
+	h.Equals(t, "qualifier-cfn-template-RUN_ID.json", testFixture.CfnTemplateFilename)
+	h.Equals(t, "AMI_ID", testFixture.AmiId)
 }
 
 func TestPopulateTestFixtureForResumedRun(t *testing.T) {
-	resetTestFixture()
-	userConfig = UserConfig{
-		Bucket:  "BUCKET_NAME",
-		Timeout: 3600,
-	}
-
-	err := PopulateTestFixture(userConfig, "RUN_ID")
+	prevTestFixture := testFixture
+	prevTestFixByte, err := json.Marshal(prevTestFixture)
 	h.Ok(t, err)
 
+	resetTestFixture()
+	h.Equals(t, "", testFixture.TestSuiteName)
+	h.Equals(t, "", testFixture.CompressedTestSuiteName)
+
+	err = RestoreTestFixture(prevTestFixByte)
+	h.Ok(t, err)
+
+	cwd, err := os.Getwd()
+	h.Assert(t, err == nil, "Error getting the working directory")
 	// Assert all the values were set
-	h.Equals(t, "RUN_ID", testFixture.RunId())
-	h.Equals(t, "", testFixture.TestSuiteName())
-	h.Equals(t, "", testFixture.CompressedTestSuiteName())
-	h.Equals(t, "BUCKET_NAME", testFixture.BucketName())
-	h.Equals(t, "Instance-Qualifier-Run-RUN_ID", testFixture.BucketRootDir())
-	h.Equals(t, 0, testFixture.TargetUtil())
-	h.Equals(t, 0, testFixture.Timeout())
-	h.Equals(t, "qualifier-stack-RUN_ID", testFixture.CfnStackName())
-	h.Equals(t, "final-results-RUN_ID.json", testFixture.FinalResultFilename())
-	h.Equals(t, "instance-qualifier-RUN_ID.config", testFixture.UserConfigFilename())
-	h.Equals(t, "qualifier-cfn-template-RUN_ID.json", testFixture.CfnTemplateFilename())
-	h.Equals(t, "", testFixture.AmiId())
+	h.Equals(t, "RUN_ID", testFixture.RunId)
+	h.Equals(t, cwd+"/TEST_SUITE_NAME", testFixture.TestSuiteName)
+	h.Equals(t, cwd+"/TEST_SUITE_NAME.tar.gz", testFixture.CompressedTestSuiteName)
+	h.Equals(t, "BUCKET_NAME", testFixture.BucketName)
+	h.Equals(t, "Instance-Qualifier-Run-RUN_ID", testFixture.BucketRootDir)
+	h.Equals(t, 50, testFixture.TargetUtil)
+	h.Equals(t, 12345, testFixture.Timeout)
+	h.Equals(t, "qualifier-stack-RUN_ID", testFixture.CfnStackName)
+	h.Equals(t, "final-results-RUN_ID.json", testFixture.FinalResultFilename)
+	h.Equals(t, "instance-qualifier-RUN_ID.config", testFixture.UserConfigFilename)
+	h.Equals(t, "qualifier-cfn-template-RUN_ID.json", testFixture.CfnTemplateFilename)
+	h.Equals(t, "AMI_ID", testFixture.AmiId)
 }
 
 func TestParseCliArgsEnvSuccess(t *testing.T) {

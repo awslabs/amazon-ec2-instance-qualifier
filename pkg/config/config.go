@@ -69,7 +69,6 @@ func RestoreTestFixture(data []byte) (err error) {
 		return err
 	}
 	fmt.Printf("Restored test fixture to: %v\n", testFixture)
-
 	return nil
 }
 
