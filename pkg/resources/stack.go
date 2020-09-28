@@ -64,7 +64,8 @@ func (itf Resources) CreateCfnStack(cfnTemplate string, vpcId string, subnetId s
 	if err := itf.CloudFormation.WaitUntilStackCreateComplete(&cloudformation.DescribeStacksInput{
 		StackName: aws.String(stackId),
 	}); err != nil {
-		fmt.Fprintf(outputStream, "CloudFormation Stack %s failed to be created. You can go to the AWS Console to check the reasons\n", testFixture.CfnStackName)
+		fmt.Fprintf(outputStream, "CloudFormation Stack %s failed to be created. Error: %v\n",testFixture.CfnStackName, err)
+		fmt.Fprintf(outputStream, "Navigate to the AWS Console for additional information\n")
 		fmt.Fprintln(outputStream, "Use the following command to delete the stack with AWS CLI:")
 		fmt.Fprintf(outputStream, "aws cloudformation delete-stack --stack-name %s\n", testFixture.CfnStackName)
 		return err

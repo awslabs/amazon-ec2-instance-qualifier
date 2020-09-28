@@ -41,7 +41,7 @@ func OutputAsTable(sess *session.Session, outputStream *os.File, results []*clou
 		return err
 	}
 
-	fmt.Println("Updating local and remote results files...")
+	fmt.Println("Updating local and remote results files after merging CloudWatch data...")
 	localPath := resultsDir + "/" + testFixture.FinalResultFilename
 	remotePath := testFixture.BucketRootDir + "/" + testFixture.FinalResultFilename
 	if err := cmdutil.MarshalToFile(finalResult, localPath); err != nil {
