@@ -24,7 +24,7 @@ import (
 
 const (
 	retryAttempts = 3
-	retryPeriod = 1 //minutes
+	retryPeriod   = 1 //minutes
 )
 
 // GetCloudWatchData retrieves instance metric data from CloudWatch
