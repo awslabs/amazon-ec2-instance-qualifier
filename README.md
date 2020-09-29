@@ -32,9 +32,11 @@ The instance qualifier is an open source command line tool that automates benchm
 
 ## Major Features
 
-* Executes test suite on a range of EC2 instance types in parallel while monitoring and collecting benchmark data. Supported benchmarks:
-  * CPU load: average queue length of processes waiting to be executed or being running (given by `uptime`)
-  * Memory used: amount of used memory (given by `free -m`)
+* Executes test suite on a range of EC2 instance types in parallel and persists test results and execution times
+* Installs and configures [CloudWatch Agent](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Install-CloudWatch-Agent.html) on each instance type for capturing benchmark data
+  * Instance-Qualifier uses the following for benchmarking: `cpu_usage_active` and `mem_used_percent`
+  * More information on these metrics can be found [here](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/metrics-collected-by-CloudWatch-agent.html)
+* Provides an ingress point for users to add their own logic to be executed in instance user data via `--custom-script` flag
 * Supports asynchronous functionality, which means users can exit the CLI after tests begin and resume the session at a later time to fetch the results
 * Uses [AWS CloudFormation](https://aws.amazon.com/cloudformation/) to manage all resources
 * Creates an S3 bucket to store test results, instance logs, user configuration and CloudFormation template
@@ -45,11 +47,12 @@ The instance qualifier is an open source command line tool that automates benchm
 * The CLI creates a CloudFormation stack with a series of resources during the run and deletes the stack at the end by default. Resources include:
   * **A VPC + Subnet + Internet Gateway**: used to launch instances. Note that they are **only created if you don't specify `vpc`/`subnet` flags or provide invalid ones**
   * **A Security Group**: same as the default security group when you create one using AWS Console.  It has an inbounding rule which opens all ports for all traffic and all protocols, but the source must be within the same security group. With this rule, the instances can access the bucket, but won't be affected by any other traffic coming outside of the security group
-  * **An IAM Role**: attached with AmazonS3FullAccess policy to allow instances to access the bucket without AWS credential configuration
+  * **An IAM Role**: attached with AmazonS3FullAccess and CloudWatchAgentServerPolicy policies to allow instances to access the bucket and emit CloudWatch metrics, respectively
   * **Launch Templates**: used to launch auto scaling group and instances
   * **An Auto Scaling Group**: the reason we use auto scaling group to manage all instances is that an one-time action can be scheduled to terminate all instances in the group after timeout to ensure the user is not excessively charged
   * **EC2 Instances**
-* An S3 bucket is also created and won't be deleted after the run, which contains the raw data if deep dive is needed
+* An **S3 bucket** containing the raw data of an Instance-Qualifier run is also created; however, this artifact is persisted by default
+* A sample of this CloudFormation stack can be found [here](https://github.com/awslabs/amazon-ec2-instance-qualifier/blob/master/pkg/templates/master_sample.template) 
 * If a fatal error occurs or the user presses Ctrl-C during the run, the CLI deletes the resources appropriately. Note that if the CLI is interrupted when the tests have begun on all instances, it thinks that the user may resume the session at a later time, thus won't delete any resources
 * No impact to any original resources or settings of the AWS account
 
@@ -78,7 +81,7 @@ export AWS_REGION="us-east-1"
 
 ## Examples
 
-**Note: the working directory where you execute `ec2-instance-qualifier` must contains the `agent` binary file**
+**Note: the working directory where you execute `ec2-instance-qualifier` must contain the `agent` binary file**
 
 **All CLI Options**
 
@@ -126,24 +129,23 @@ Flags:
         [OPTIONAL] vpc id
 ```
 
-**Example 1: test files in test-folder against m4.large, c5.large and m4.xlarge with a target utilization of 50% in a specified VPC and subnet** *(logs not included in output below)*
+**Example 1: Test against m4.large and m4.xlarge with a target utilization of 80% in an existing VPC and subnet** *(logs not included in output below)*
 
 ```
-$ ./ec2-instance-qualifier --instance-types=m4.large,c5.large,m4.xlarge --test-suite=test-folder --target-utilization=50 --vpc=vpc-294b9542 --subnet=subnet-4879bf23
+$ ./ec2-instance-qualifier --instance-types=m4.large,m4.xlarge --test-suite=test-folder --target-utilization=80 --timeout=3600 --vpc=vpc-294b9542 --subnet=subnet-4879bf23
 Region Used: us-east-2
 Test Run ID: opcfxoss0uyxym4
 Bucket Created: qualifier-bucket-opcfxoss0uyxym4
 Stack Created: qualifier-stack-opcfxoss0uyxym4
 The execution of test suite has been kicked off on all instances. You may quit now and later run the CLI again with the bucket name flag to get the result
-+---------------+---------------------------+-------------+----+---------------+----+-----------------+----------------------------+
-| INSTANCE TYPE | MEETS TARGET UTILIZATION? | MAX CPU (n) | %  | MAX MEM (MiB) | %  | ALL TESTS PASS? | TOTAL EXECUTION TIME (sec) |
-+---------------+---------------------------+-------------+----+---------------+----+-----------------+----------------------------+
-|   c5.large    |           FAIL            |    1.667    | 83 |     3188      | 78 |      true       |          130.590           |
-+---------------+---------------------------+-------------+----+---------------+----+-----------------+----------------------------+
-|   m4.xlarge   |          SUCCESS          |    1.677    | 42 |     3211      | 20 |      true       |          130.722           |
-+---------------+---------------------------+-------------+----+---------------+----+-----------------+----------------------------+
-|   m4.large    |           FAIL            |    1.687    | 84 |     3193      | 39 |      true       |          130.703           |
-+---------------+---------------------------+-------------+----+---------------+----+-----------------+----------------------------+
++---------------+---------------------------+-------------------------+--------------------------+-----------------+----------------------------+
+| INSTANCE TYPE | MEETS TARGET UTILIZATION? | CPU_USAGE_ACTIVE (p100) |  MEM_USED_PERCENT (p100) | ALL TESTS PASS? | TOTAL EXECUTION TIME (sec) |
++---------------+---------------------------+-------------------------+--------------------------+-----------------+----------------------------+
+|   m4.large    |           FAIL            |         100.000         |          1.409           |      true       |          130.731           |
++---------------+---------------------------+-------------------------+--------------------------+-----------------+----------------------------+
+|   m4.xlarge   |          SUCCESS          |         50.117          |          1.468           |      true       |          130.697           |
++---------------+---------------------------+-------------------------+--------------------------+-----------------+----------------------------+
+
 
 Detailed test results can be found in s3://qualifier-bucket-opcfxoss0uyxym4/Instance-Qualifier-Run-opcfxoss0uyxym4
 User configuration and CloudFormation template are stored in the root directory of the bucket. You may check them if you want
@@ -151,35 +153,39 @@ The process of cleaning up stack resources has started. You can quit now
 Completed!
 ```
 
-**Example 2: test in a new VPC infrastructure with a timeout of 125 seconds** *(logs not included in output below)*
+A unique ID is assigned to each test run and the bucket and stack names also contain the ID. From the results, we know that all instances ran the whole test suite successfully, but only m4.xlarge succeeded to meet the target utilization requirement.
+
+
+
+**Example 2: Same as Example 1, but using a config file instead of CLI args**
 
 ```
-$ ./ec2-instance-qualifier --instance-types=c4.large,m5.large,m4.xlarge --test-suite=test-folder --target-utilization=50 --timeout=125
-Region Used: us-east-2
-Test Run ID: 72suqu0ra0t7t1a
-Bucket Created: qualifier-bucket-72suqu0ra0t7t1a
-Stack Created: qualifier-stack-72suqu0ra0t7t1a
-The execution of test suite has been kicked off on all instances. You may quit now and later run the CLI again with the bucket name flag to get the result
-+---------------+---------------------------+-------------+----+---------------+---+-----------------+----------------------------+
-| INSTANCE TYPE | MEETS TARGET UTILIZATION? | MAX CPU (n) | %  | MAX MEM (MiB) | % | ALL TESTS PASS? | TOTAL EXECUTION TIME (sec) |
-+---------------+---------------------------+-------------+----+---------------+---+-----------------+----------------------------+
-|   c4.large    |           FAIL            |    1.217    | 61 |      83       | 2 |      false      |          120.010           |
-+---------------+---------------------------+-------------+----+---------------+---+-----------------+----------------------------+
-|   m5.large    |           FAIL            |    1.262    | 63 |      92       | 1 |      false      |          120.027           |
-+---------------+---------------------------+-------------+----+---------------+---+-----------------+----------------------------+
-|   m4.xlarge   |          SUCCESS          |    1.389    | 35 |      109      | 1 |      false      |          120.020           |
-+---------------+---------------------------+-------------+----+---------------+---+-----------------+----------------------------+
+$ cat iq-config.json
+{
+	"instance-types": "m4.large,m4.xlarge",
+	"test-suite": "test-folder",
+	"target-utilization": 80,
+	"vpc": "vpc-294b9542",
+	"subnet": "subnet-4879bf23",
+	"ami": "",
+	"timeout": 3600,
+	"persist": false,
+	"profile": "",
+	"region": "us-east-2",
+	"bucket": "",
+	"custom-script": ""
+}
 
-Detailed test results can be found in s3://qualifier-bucket-72suqu0ra0t7t1a/Instance-Qualifier-Run-72suqu0ra0t7t1a
-User configuration and CloudFormation template are stored in the root directory of the bucket. You may check them if you want
-The process of cleaning up stack resources has started. You can quit now
-Completed!
-```
 
-**Example 3: test against unsupported instance types and exit the CLI after tests begin, then resume the session at a later time to fetch the results** *(logs not included in output below)*
+$ ./ec2-instance-qualifier --config-file=iq-config.json
+(Same output as Example 1)
 
 ```
-$ ./ec2-instance-qualifier --instance-types=m5n.large,a1.large --test-suite=test-folder --target-utilization=95
+
+**Example 3: Prompt due to an instance-type not supporting AMI**
+
+```
+$ ./ec2-instance-qualifier --instance-types=m4.xlarge,a1.large --test-suite=test-folder --target-utilization=95
 Region Used: us-east-2
 Test Run ID: n3lytbolzfaq3np
 Bucket Created: qualifier-bucket-n3lytbolzfaq3np
@@ -187,25 +193,33 @@ Instance types [a1.large] are not supported due to AMI or Availability Zone. Do 
 y
 Stack Created: qualifier-stack-n3lytbolzfaq3np
 The execution of test suite has been kicked off on all instances. You may quit now and later run the CLI again with the bucket name flag to get the result
-^C
 ```
+The default AMI (Amazon Linux 2) is not compatible with `a1.large` architecture; therefore, the CLI prompts the user whether to continue the instance-qualifier run with compatible instance types only.
+
+
+**Example 3.5: Exit CLI after stack creation, then resume**
 
 ```
+(...continued from above)
+The execution of test suite has been kicked off on all instances. You may quit now and later run the CLI again with the bucket name flag to get the result
+^C
+
 $ ./ec2-instance-qualifier --bucket=qualifier-bucket-n3lytbolzfaq3np
 Region Used: us-east-2
 Test Run ID: n3lytbolzfaq3np
 Bucket Used: qualifier-bucket-n3lytbolzfaq3np
-+---------------+---------------------------+-------------+----+---------------+----+-----------------+----------------------------+
-| INSTANCE TYPE | MEETS TARGET UTILIZATION? | MAX CPU (n) | %  | MAX MEM (MiB) | %  | ALL TESTS PASS? | TOTAL EXECUTION TIME (sec) |
-+---------------+---------------------------+-------------+----+---------------+----+-----------------+----------------------------+
-|   m5n.large   |          SUCCESS          |    1.697    | 85 |     3195      | 39 |      true       |          130.613           |
-+---------------+---------------------------+-------------+----+---------------+----+-----------------+----------------------------+
++---------------+---------------------------+-------------------------+--------------------------+-----------------+----------------------------+
+| INSTANCE TYPE | MEETS TARGET UTILIZATION? | CPU_USAGE_ACTIVE (p100) |  MEM_USED_PERCENT (p100) | ALL TESTS PASS? | TOTAL EXECUTION TIME (sec) |
++---------------+---------------------------+-------------------------+--------------------------+-----------------+----------------------------+
+|   m4.xlarge   |          SUCCESS          |         50.117          |          1.468           |      true       |          130.697           |
++---------------+---------------------------+-------------------------+--------------------------+-----------------+----------------------------+
 
 Detailed test results can be found in s3://qualifier-bucket-n3lytbolzfaq3np/Instance-Qualifier-Run-n3lytbolzfaq3np
 User configuration and CloudFormation template are stored in the root directory of the bucket. You may check them if you want
 The process of cleaning up stack resources has started. You can quit now
 ^C
 ```
+The CLI is interrupted after tests began executing on instances, then resumed by providing the bucket flag. Quitting before the *you may quit now* messaging results in both the CloudFormation stack and S3 bucket getting deleted.
 
 ## Interpreting Results
 
@@ -213,26 +227,10 @@ The process of cleaning up stack resources has started. You can quit now
 
 * `INSTANCE TYPE`: instance type
 * `MEETS TARGET UTILIZATION?`: SUCCESS if max CPU and max MEM are less than target utilization; FAIL otherwise
-* `MAX CPU`: highest CPU load average recorded out of all completed test runs
-* `%`: MAX CPU as a percentage of number of VCPUs
-* `MAX MEM`: highest memory used average recorded out of all completed test runs
-* `%`: MAX MEM as percentage of physical memory size
+* `CPU_USAGE_ACTIVE`: max `cpu_usage_active` recorded (p100) over the duration of instance-qualifier run
+* `MEM_USED_PERCENT`: max `mem_used_percent` recorded (p100) over the duration of instance-qualifier run
 * `ALL TESTS PASS?`: true if **all** tests execute successfully (without an error code); false otherwise
 * `TOTAL EXECUTION TIME`: how long it took the instance to execute all tests in seconds
-
-### Interpretation of Example Results
-
-**Example 1**
-
-A unique ID is assigned to each test run and the bucket and stack names also contain the ID. From the results, we know that all instances ran the whole test suite successfully, but only m4.xlarge succeeded to meet the target utilization requirement.
-
-**Example 2**
-
-All instances failed to pass all tests due to timeout. And since partial results are not recorded, the values of `MAX CPU` + `%`, `MAX MEM` + `%`, `TOTAL EXECUTION TIME` and `MEETS TARGET UTILIZATION?` were calculated based on only the finished tests. 
-
-**Example 3**
-
-First, `a1.large` doesn't support x86_64, which is the architecture of the default AMI (Amazon Linux 2), so the CLI asked the user whether to continue the tests with the rest instance types. Then the CLI was interrupted when the tests began on instances, and later resumed by providing the bucket flag. Finally when the CLI said "You can quit now", the user pressed Ctrl-C again, which wouldn't interrupt the asynchronous deletion of resources.
 
 ## Building
 For build instructions please consult [BUILD.md](./BUILD.md).
