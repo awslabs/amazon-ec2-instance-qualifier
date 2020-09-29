@@ -22,12 +22,3 @@ type AgentFixture struct {
 	InstanceResultFilename string
 	LogFilename            string
 }
-
-// metricInfo contains the information about a specific type of metric.
-type metricInfo struct {
-	name          string
-	unit          string
-	monitorScript string
-	output        string
-	threshold     float64
-}

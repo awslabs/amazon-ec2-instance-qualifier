@@ -25,15 +25,11 @@ import (
 
 const (
 	agentBin                  = "agent"
-	monitorCpuFilename        = "monitor-cpu.sh"
-	monitorMemFilename        = "monitor-mem.sh"
 	cloudWatchAgentConfigName = "cwagent-config.json"
 )
 
 // DO NOT EDIT: these values are populated by the Makefile
 var (
-	encodedMonitorCpuScript      string
-	encodedMonitorMemScript      string
 	encodedCloudWatchAgentConfig string
 )
 
@@ -57,30 +53,15 @@ func SetTestSuite() error {
 
 // IsInstanceQualifierScript checks whether a file is an internal script file of the instance-qualifier.
 func IsInstanceQualifierScript(filename string) bool {
-	if filename == agentBin || filename == monitorCpuFilename || filename == monitorMemFilename || filename == cloudWatchAgentConfigName {
+	if filename == agentBin || filename == cloudWatchAgentConfigName {
 		return true
 	}
 	return false
 }
 
 func copyAgentScriptsToTestSuite(testSuiteName string) error {
-	monitorCpuScript, err := cmdutil.DecodeBase64(encodedMonitorCpuScript)
-	if err != nil {
-		return err
-	}
-	monitorMemScript, err := cmdutil.DecodeBase64(encodedMonitorMemScript)
-	if err != nil {
-		return err
-	}
 	cloudWatchAgentConfig, err := cmdutil.DecodeBase64(encodedCloudWatchAgentConfig)
 	if err != nil {
-		return err
-	}
-
-	if err := ioutil.WriteFile(testSuiteName+"/"+monitorCpuFilename, []byte(monitorCpuScript), 0644); err != nil {
-		return err
-	}
-	if err := ioutil.WriteFile(testSuiteName+"/"+monitorMemFilename, []byte(monitorMemScript), 0644); err != nil {
 		return err
 	}
 	if err := ioutil.WriteFile(testSuiteName+"/"+cloudWatchAgentConfigName, []byte(cloudWatchAgentConfig), 0644); err != nil {

@@ -121,8 +121,8 @@ func updateResults(results []*cloudwatch.MetricDataResult, testFixture config.Te
 	}
 	for _, instanceResult := range finalResult {
 		oldRes := instanceResult.Results
-		for _, res := range oldRes {
-			copy(res.Metrics, cwMetrics[instanceResult.InstanceId])
+		for i := range oldRes {
+			oldRes[i].Metrics = cwMetrics[instanceResult.InstanceId]
 		}
 	}
 	return finalResult, nil

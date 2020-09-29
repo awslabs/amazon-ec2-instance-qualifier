@@ -18,53 +18,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/awslabs/amazon-ec2-instance-qualifier/pkg/resources"
 	h "github.com/awslabs/amazon-ec2-instance-qualifier/pkg/test"
 )
 
 // Tests
-
-func TestPopulateThresholdsSuccess(t *testing.T) {
-	instance := resources.Instance{
-		VCpus:  "2",
-		Memory: "8192",
-	}
-
-	err := PopulateThresholds(instance, "50")
-	h.Ok(t, err)
-	h.Equals(t, 1.0, metricInfos[cpu].threshold)
-	h.Equals(t, 4096.0, metricInfos[mem].threshold)
-}
-
-func TestPopulateThresholdsInvalidTargetUtilFailure(t *testing.T) {
-	instance := resources.Instance{
-		VCpus:  "2",
-		Memory: "8192",
-	}
-
-	err := PopulateThresholds(instance, "TARGET_UTIL")
-	h.Assert(t, err != nil, "Failed to return error when target utilization is invalid")
-}
-
-func TestPopulateThresholdsInvalidVCpusFailure(t *testing.T) {
-	instance := resources.Instance{
-		VCpus:  "VCPUS",
-		Memory: "8192",
-	}
-
-	err := PopulateThresholds(instance, "50")
-	h.Assert(t, err != nil, "Failed to return error when VCpus is invalid")
-}
-
-func TestPopulateThresholdsInvalidMemoryFailure(t *testing.T) {
-	instance := resources.Instance{
-		VCpus:  "2",
-		Memory: "MEMORY",
-	}
-
-	err := PopulateThresholds(instance, "50")
-	h.Assert(t, err != nil, "Failed to return error when Memory is invalid")
-}
 
 func TestGetTestFileListSuccess(t *testing.T) {
 	// Prepare the test directory
@@ -77,8 +34,6 @@ func TestGetTestFileListSuccess(t *testing.T) {
 	}
 	createEmptyFile("cpu-test.sh")
 	createEmptyFile("mem-test.sh")
-	createEmptyFile("monitor-cpu.sh")
-	createEmptyFile("monitor-mem.sh")
 	createEmptyFile("agent")
 	createEmptyFile("cpu.load")
 	createEmptyFile("mem.load")
@@ -95,40 +50,4 @@ func TestGetTestFileListSuccess(t *testing.T) {
 func TestGetTestFileListNonExistentDirFailure(t *testing.T) {
 	_, err := GetTestFileList("non-existent-dir")
 	h.Assert(t, err != nil, "Failed to return error when the directory doesn't exist")
-}
-
-func TestCalculateAvgValueSuccess(t *testing.T) {
-	values := "123\n456\n789\n123"
-	tempFile, err := ioutil.TempFile("", "temp-load")
-	defer os.Remove(tempFile.Name())
-	h.Assert(t, err == nil, "Error creating the temporary load file")
-	err = ioutil.WriteFile(tempFile.Name(), []byte(values), 0644)
-	h.Assert(t, err == nil, "Error writing the temporary load file")
-
-	avg, err := calculateAvgValue(tempFile.Name())
-	h.Ok(t, err)
-	h.Equals(t, 372.75, avg)
-	// Assert the load file is deleted
-	_, err = os.Stat(tempFile.Name())
-	h.Assert(t, os.IsNotExist(err), "Failed to delete the load file")
-}
-
-func TestCalculateAvgValueNonExistentFileFailure(t *testing.T) {
-	_, err := calculateAvgValue("non-existent-file")
-	h.Assert(t, err != nil, "Failed to return error when the load file doesn't exist")
-}
-
-func TestCalculateAvgValueInvalidDataFailure(t *testing.T) {
-	values := "123\n \nabc\n321"
-	tempFile, err := ioutil.TempFile("", "temp-load")
-	defer os.Remove(tempFile.Name())
-	h.Assert(t, err == nil, "Error creating the temporary load file")
-	err = ioutil.WriteFile(tempFile.Name(), []byte(values), 0644)
-	h.Assert(t, err == nil, "Error writing the temporary load file")
-
-	_, err = calculateAvgValue(tempFile.Name())
-	h.Assert(t, err != nil, "Failed to return error when data points are invalid")
-	// Assert the load file is deleted
-	_, err = os.Stat(tempFile.Name())
-	h.Assert(t, os.IsNotExist(err), "Failed to delete the load file")
 }
