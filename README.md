@@ -45,11 +45,11 @@ The instance qualifier is an open source command line tool that automates benchm
 ## Impact to AWS Account
 
 * The CLI creates a CloudFormation stack with a series of resources during the run and deletes the stack at the end by default. Resources include:
-  * **A VPC + Subnet + Internet Gateway**: used to launch instances. Note that they are **only created if you don't specify `vpc`/`subnet` flags or provide invalid ones**
-  * **A Security Group**: same as the default security group when you create one using AWS Console.  It has an inbounding rule which opens all ports for all traffic and all protocols, but the source must be within the same security group. With this rule, the instances can access the bucket, but won't be affected by any other traffic coming outside of the security group
-  * **An IAM Role**: attached with AmazonS3FullAccess and CloudWatchAgentServerPolicy policies to allow instances to access the bucket and emit CloudWatch metrics, respectively
+  * A **VPC + Subnet + Internet Gateway**: used to launch instances. Note that they are **only created if you don't specify `vpc`/`subnet` flags or provide invalid ones**
+  * A **Security Group**: same as the default security group when you create one using AWS Console.  It has an inbounding rule which opens all ports for all traffic and all protocols, but the source must be within the same security group. With this rule, the instances can access the bucket, but won't be affected by any other traffic coming outside of the security group
+  * An **IAM Role**: attached with AmazonS3FullAccess and CloudWatchAgentServerPolicy policies to allow instances to access the bucket and emit CloudWatch metrics, respectively
   * **Launch Templates**: used to launch auto scaling group and instances
-  * **An Auto Scaling Group**: the reason we use auto scaling group to manage all instances is that an one-time action can be scheduled to terminate all instances in the group after timeout to ensure the user is not excessively charged
+  * An **Auto Scaling Group**: the reason we use auto scaling group to manage all instances is that an one-time action can be scheduled to terminate all instances in the group after timeout to ensure the user is not excessively charged
   * **EC2 Instances**
 * An **S3 bucket** containing the raw data of an Instance-Qualifier run is also created; however, this artifact is persisted by default
 * A sample of this CloudFormation stack can be found [here](https://github.com/awslabs/amazon-ec2-instance-qualifier/blob/master/pkg/templates/master_sample.template) 
