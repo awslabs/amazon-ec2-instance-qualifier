@@ -37,7 +37,8 @@ func resetTestFixture() {
 	testFixture.CompressedTestSuiteName = ""
 	testFixture.BucketName = ""
 	testFixture.BucketRootDir = ""
-	testFixture.TargetUtil = 0
+	testFixture.CpuThreshold = 0
+	testFixture.MemThreshold = 0
 	testFixture.Timeout = 0
 	testFixture.CfnStackName = ""
 	testFixture.FinalResultFilename = ""
@@ -60,7 +61,8 @@ func TestPopulateTestFixtureForNewRun(t *testing.T) {
 	userConfig = UserConfig{
 		InstanceTypes: "INSTANCE_TYPES",
 		TestSuiteName: "TEST_SUITE_NAME",
-		TargetUtil:    50,
+		CpuThreshold:  50,
+		MemThreshold:  50,
 		Timeout:       12345,
 		Region:        "REGION",
 	}
@@ -76,7 +78,8 @@ func TestPopulateTestFixtureForNewRun(t *testing.T) {
 	h.Equals(t, cwd+"/TEST_SUITE_NAME.tar.gz", testFixture.CompressedTestSuiteName)
 	h.Equals(t, "BUCKET_NAME", testFixture.BucketName)
 	h.Equals(t, "Instance-Qualifier-Run-RUN_ID", testFixture.BucketRootDir)
-	h.Equals(t, 50, testFixture.TargetUtil)
+	h.Equals(t, 50, testFixture.CpuThreshold)
+	h.Equals(t, 50, testFixture.MemThreshold)
 	h.Equals(t, 12345, testFixture.Timeout)
 	h.Equals(t, "qualifier-stack-RUN_ID", testFixture.CfnStackName)
 	h.Equals(t, "final-results-RUN_ID.json", testFixture.FinalResultFilename)
@@ -105,7 +108,8 @@ func TestPopulateTestFixtureForResumedRun(t *testing.T) {
 	h.Equals(t, cwd+"/TEST_SUITE_NAME.tar.gz", testFixture.CompressedTestSuiteName)
 	h.Equals(t, "BUCKET_NAME", testFixture.BucketName)
 	h.Equals(t, "Instance-Qualifier-Run-RUN_ID", testFixture.BucketRootDir)
-	h.Equals(t, 50, testFixture.TargetUtil)
+	h.Equals(t, 50, testFixture.CpuThreshold)
+	h.Equals(t, 50, testFixture.MemThreshold)
 	h.Equals(t, 12345, testFixture.Timeout)
 	h.Equals(t, "qualifier-stack-RUN_ID", testFixture.CfnStackName)
 	h.Equals(t, "final-results-RUN_ID.json", testFixture.FinalResultFilename)
@@ -121,7 +125,8 @@ func TestParseCliArgsEnvSuccess(t *testing.T) {
 		"cmd",
 		"--instance-types=INSTANCE_TYPES",
 		"--test-suite=TEST_SUITE",
-		"--target-utilization=30",
+		"--cpu-threshold=30",
+		"--mem-threshold=30",
 	}
 	userConfig, err := ParseCliArgs(outputStream)
 	h.Ok(t, err)
@@ -135,7 +140,8 @@ func TestParseCliArgsSuccess(t *testing.T) {
 		"cmd",
 		"--instance-types=INSTANCE_TYPES",
 		"--test-suite=TEST_SUITE",
-		"--target-utilization=30",
+		"--cpu-threshold=30",
+		"--mem-threshold=30",
 		"--vpc=VPC",
 		"--subnet=SUBNET",
 		"--ami=AMI",
@@ -152,7 +158,8 @@ func TestParseCliArgsSuccess(t *testing.T) {
 	// Assert all the values were set
 	h.Equals(t, "INSTANCE_TYPES", userConfig.InstanceTypes)
 	h.Equals(t, "TEST_SUITE", userConfig.TestSuiteName)
-	h.Equals(t, 30, userConfig.TargetUtil)
+	h.Equals(t, 30, userConfig.CpuThreshold)
+	h.Equals(t, 30, userConfig.MemThreshold)
 	h.Equals(t, "VPC", userConfig.VpcId)
 	h.Equals(t, "SUBNET", userConfig.SubnetId)
 	h.Equals(t, "AMI", userConfig.AmiId)
@@ -175,14 +182,16 @@ func TestParseCliArgsPriority(t *testing.T) {
 		"cmd",
 		"--instance-types=INSTANCE_TYPES_Args",
 		"--test-suite=TEST_SUITE",
-		"--target-utilization=30",
+		"--cpu-threshold=30",
+		"--mem-threshold=30",
 		"--config-file=../../test/static/UserConfigFiles/valid.config",
 	}
 	userConfig, err := ParseCliArgs(outputStream)
 	h.Ok(t, err)
 
 	h.Equals(t, "INSTANCE_TYPES_Args", userConfig.InstanceTypes)                             //Args
-	h.Equals(t, 30, userConfig.TargetUtil)                                                   //Args
+	h.Equals(t, 30, userConfig.CpuThreshold)												  //Args
+	h.Equals(t, 30, userConfig.MemThreshold)                                                 //Args
 	h.Equals(t, "../../test/static/UserConfigFiles/valid.config", userConfig.ConfigFilePath) //Args
 	h.Equals(t, "us-weast-1", userConfig.Region)                                             //Env
 	h.Equals(t, 12345, userConfig.Timeout)                                                   //Config File
@@ -207,7 +216,8 @@ func TestParseCliArgsOverrides(t *testing.T) {
 		"cmd",
 		"--instance-types=INSTANCE_TYPES",
 		"--test-suite=TEST_SUITE",
-		"--target-utilization=30",
+		"--cpu-threshold=30",
+		"--mem-threshold=25",
 		"--vpc=VPC",
 		"--subnet=SUBNET",
 		"--ami=AMI",
@@ -222,7 +232,8 @@ func TestParseCliArgsOverrides(t *testing.T) {
 	// Assert all the values were set
 	h.Equals(t, "INSTANCE_TYPES", userConfig.InstanceTypes)
 	h.Equals(t, "TEST_SUITE", userConfig.TestSuiteName)
-	h.Equals(t, 30, userConfig.TargetUtil)
+	h.Equals(t, 30, userConfig.CpuThreshold)
+	h.Equals(t, 25, userConfig.MemThreshold)
 	h.Equals(t, "VPC", userConfig.VpcId)
 	h.Equals(t, "SUBNET", userConfig.SubnetId)
 	h.Equals(t, "AMI", userConfig.AmiId)
@@ -237,7 +248,8 @@ func TestParseCliArgsMissingInstanceTypesFailure(t *testing.T) {
 	os.Args = []string{
 		"cmd",
 		"--test-suite=TEST_SUITE",
-		"--target-utilization=30",
+		"--cpu-threshold=30",
+		"--mem-threshold=25",
 		"--vpc=VPC",
 		"--subnet=SUBNET",
 		"--timeout=12345",
@@ -253,7 +265,8 @@ func TestParseCliArgsMissingTestSuiteFailure(t *testing.T) {
 	os.Args = []string{
 		"cmd",
 		"--instance-types=INSTANCE_TYPES",
-		"--target-utilization=30",
+		"--cpu-threshold=30",
+		"--mem-threshold=25",
 		"--subnet=SUBNET",
 		"--ami=AMI",
 		"--timeout=12345",
@@ -264,7 +277,7 @@ func TestParseCliArgsMissingTestSuiteFailure(t *testing.T) {
 	h.Assert(t, err != nil, "Failed to return error when test-suite not provided")
 }
 
-func TestParseCliArgsMissingTargetUtilizationFailure(t *testing.T) {
+func TestParseCliArgsMissingThresholdsFailure(t *testing.T) {
 	resetFlagsForTest()
 	os.Args = []string{
 		"cmd",
@@ -277,19 +290,20 @@ func TestParseCliArgsMissingTargetUtilizationFailure(t *testing.T) {
 		"--profile=PROFILE",
 	}
 	_, err := ParseCliArgs(outputStream)
-	h.Assert(t, err != nil, "Failed to return error when target-utilization not provided")
+	h.Assert(t, err != nil, "Failed to return error when benchmark thresholds not provided")
 }
 
-func TestParseCliArgsNonPositiveTargetUtilizationFailure(t *testing.T) {
+func TestParseCliArgsNonPositiveThresholdFailure(t *testing.T) {
 	resetFlagsForTest()
 	os.Args = []string{
 		"cmd",
 		"--instance-types=INSTANCE_TYPES",
 		"--test-suite=TEST_SUITE",
-		"--target-utilization=-1",
+		"--cpu-threshold=30",
+		"--mem-threshold=-25",
 	}
 	_, err := ParseCliArgs(outputStream)
-	h.Assert(t, err != nil, "Failed to return error when non-positive target utilization provided")
+	h.Assert(t, err != nil, "Failed to return error when non-positive benchmark threshold provided")
 }
 
 func TestParseCliArgsNonPositiveTimeoutFailure(t *testing.T) {
@@ -298,7 +312,8 @@ func TestParseCliArgsNonPositiveTimeoutFailure(t *testing.T) {
 		"cmd",
 		"--instance-types=INSTANCE_TYPES",
 		"--test-suite=TEST_SUITE",
-		"--target-utilization=123",
+		"--cpu-threshold=30",
+		"--mem-threshold=25",
 		"--timeout=0",
 	}
 	_, err := ParseCliArgs(outputStream)
@@ -311,7 +326,8 @@ func TestWriteUserConfigSuccess(t *testing.T) {
 	userConfig = UserConfig{
 		InstanceTypes: "INSTANCE_TYPES",
 		TestSuiteName: "TEST_SUITE",
-		TargetUtil:    50,
+		CpuThreshold:  50,
+		MemThreshold:  25,
 		VpcId:         "VPC_ID",
 		Timeout:       12345,
 		Region:        "us-east-2",
@@ -332,7 +348,8 @@ func TestWriteUserConfigNonExistentFilePathFailure(t *testing.T) {
 	userConfig = UserConfig{
 		InstanceTypes: "INSTANCE_TYPES",
 		TestSuiteName: "TEST_SUITE",
-		TargetUtil:    50,
+		CpuThreshold:  50,
+		MemThreshold:  25,
 		Timeout:       12345,
 	}
 
@@ -344,7 +361,8 @@ func TestReadUserConfigSuccess(t *testing.T) {
 	expected := UserConfig{
 		InstanceTypes: "INSTANCE_TYPES",
 		TestSuiteName: "TEST_SUITE",
-		TargetUtil:    50,
+		CpuThreshold:  50,
+		MemThreshold:  25,
 		VpcId:         "VPC_ID",
 		Timeout:       12345,
 		Region:        "us-east-2",
@@ -356,7 +374,8 @@ func TestReadUserConfigSuccess(t *testing.T) {
 	// Assert all fields are same
 	h.Equals(t, expected.InstanceTypes, actual.InstanceTypes)
 	h.Equals(t, expected.TestSuiteName, actual.TestSuiteName)
-	h.Equals(t, expected.TargetUtil, actual.TargetUtil)
+	h.Equals(t, expected.CpuThreshold, actual.CpuThreshold)
+	h.Equals(t, expected.MemThreshold, actual.MemThreshold)
 	h.Equals(t, expected.VpcId, actual.VpcId)
 	h.Equals(t, expected.SubnetId, actual.SubnetId)
 	h.Equals(t, expected.AmiId, actual.AmiId)

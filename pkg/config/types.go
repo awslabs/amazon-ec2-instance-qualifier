@@ -17,7 +17,8 @@ package config
 type UserConfig struct {
 	InstanceTypes    string `json:"instance-types"`
 	TestSuiteName    string `json:"test-suite"`
-	TargetUtil       int    `json:"target-utilization"`
+	CpuThreshold     int    `json:"cpu-threshold"`
+	MemThreshold     int    `json:"mem-threshold"`
 	VpcId            string `json:"vpc"`
 	SubnetId         string `json:"subnet"`
 	AmiId            string `json:"ami"`
@@ -37,7 +38,8 @@ type TestFixture struct {
 	CompressedTestSuiteName string `json:"compressed-test-suite"`
 	BucketName              string `json:"bucket-name"`
 	BucketRootDir           string `json:"bucket-root-dir"`
-	TargetUtil              int    `json:"target-utilization"`
+	CpuThreshold            int    `json:"cpu-threshold"`
+	MemThreshold            int    `json:"mem-threshold"`
 	Timeout                 int    `json:"timeout"`
 	CfnStackName            string `json:"stack-name"`
 	FinalResultFilename     string `json:"final-results"`
@@ -58,8 +60,11 @@ func (UserConfig) SetUserConfig(reqConfig UserConfig) {
 	if userConfig.TestSuiteName == "" {
 		userConfig.TestSuiteName = reqConfig.TestSuiteName
 	}
-	if userConfig.TargetUtil <= 0 {
-		userConfig.TargetUtil = reqConfig.TargetUtil
+	if userConfig.CpuThreshold <= 0 {
+		userConfig.CpuThreshold = reqConfig.CpuThreshold
+	}
+	if userConfig.MemThreshold <= 0 {
+		userConfig.MemThreshold = reqConfig.MemThreshold
 	}
 	if userConfig.VpcId == "" {
 		userConfig.VpcId = reqConfig.VpcId
