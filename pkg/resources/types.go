@@ -20,6 +20,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/autoscaling/autoscalingiface"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
+	"github.com/aws/aws-sdk-go/service/cloudwatch"
+	"github.com/aws/aws-sdk-go/service/cloudwatch/cloudwatchiface"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -41,6 +43,7 @@ type Resources struct {
 	S3ManagerUploader   s3manageriface.UploaderAPI
 	S3ManagerDownloader s3manageriface.DownloaderAPI
 	CloudFormation      cloudformationiface.CloudFormationAPI
+	CloudWatch          cloudwatchiface.CloudWatchAPI
 	EC2Metadata         EC2MetadataAPI
 }
 
@@ -81,6 +84,7 @@ func New(sess *session.Session) *Resources {
 		S3ManagerUploader:   s3manager.NewUploader(sess),
 		S3ManagerDownloader: s3manager.NewDownloader(sess),
 		CloudFormation:      cloudformation.New(sess),
+		CloudWatch:          cloudwatch.New(sess),
 		EC2Metadata:         ec2metadata.New(sess),
 	}
 }

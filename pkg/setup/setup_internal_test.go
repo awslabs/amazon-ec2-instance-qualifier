@@ -29,8 +29,6 @@ const (
 
 func cleanup() {
 	os.Remove(testFolder + "/agent")
-	os.Remove(testFolder + "/monitor-cpu.sh")
-	os.Remove(testFolder + "/monitor-mem.sh")
 	os.Remove(testFolder + "/cwagent-config.json")
 }
 
@@ -53,8 +51,7 @@ func TestCopyAgentScriptsToTestSuiteSuccess(t *testing.T) {
 		h.Equals(t, expectedContent, string(data))
 	}
 	assertScriptFileInTestSuite("agent", "AGENT")
-	assertScriptFileInTestSuite("monitor-cpu.sh", "")
-	assertScriptFileInTestSuite("monitor-mem.sh", "")
+	assertScriptFileInTestSuite("cwagent-config.json", "")
 }
 
 func TestCopyAgentScriptsToTestSuiteNonExistentTestSuiteFailure(t *testing.T) {
@@ -85,8 +82,7 @@ func TestRemoveAgentScriptsFromTestSuiteSuccess(t *testing.T) {
 		h.Assert(t, err == nil, "Error creating script file "+filename)
 	}
 	createScriptFileInTestSuite("agent")
-	createScriptFileInTestSuite("monitor-cpu.sh")
-	createScriptFileInTestSuite("monitor-mem.sh")
+	createScriptFileInTestSuite("cwagent-config.json")
 
 	err = removeAgentScriptsFromTestSuite(testFolder)
 	h.Ok(t, err)

@@ -55,7 +55,7 @@ func (itf Resources) IsInstanceRunning(instanceId string) (bool, error) {
 // GetInstancesInCfnStack populates InstanceId and InstanceType fields of the Instance struct for all instances in the
 // CloudFormation stack, and returns them.
 func (itf Resources) GetInstancesInCfnStack() (instances []Instance, err error) {
-	instanceIds, err := itf.getInstanceIds(config.GetTestFixture().CfnStackName())
+	instanceIds, err := itf.getInstanceIds(config.GetTestFixture().CfnStackName)
 	if err != nil {
 		return nil, err
 	}

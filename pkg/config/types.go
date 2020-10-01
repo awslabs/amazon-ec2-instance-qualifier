@@ -32,82 +32,23 @@ type UserConfig struct {
 
 // TestFixture contains constant information for the entire run.
 type TestFixture struct {
-	runId                   string
-	testSuiteName           string
-	compressedTestSuiteName string
-	bucketName              string
-	bucketRootDir           string
-	targetUtil              int
-	timeout                 int
-	cfnStackName            string
-	finalResultFilename     string
-	userConfigFilename      string
-	cfnTemplateFilename     string
-	amiId                   string
+	RunId                   string `json:"runId"`
+	TestSuiteName           string `json:"test-suite"`
+	CompressedTestSuiteName string `json:"compressed-test-suite"`
+	BucketName              string `json:"bucket-name"`
+	BucketRootDir           string `json:"bucket-root-dir"`
+	TargetUtil              int    `json:"target-utilization"`
+	Timeout                 int    `json:"timeout"`
+	CfnStackName            string `json:"stack-name"`
+	FinalResultFilename     string `json:"final-results"`
+	UserConfigFilename      string `json:"user-config"`
+	CfnTemplateFilename     string `json:"cfn-template"`
+	AmiId                   string `json:"ami"`
+	StartTime               string `json:"start-time"`
 }
 
 var testFixture TestFixture
 var userConfig UserConfig
-
-// RunId returns runId.
-func (t TestFixture) RunId() string {
-	return t.runId
-}
-
-// TestSuiteName returns TestSuiteName.
-func (t TestFixture) TestSuiteName() string {
-	return t.testSuiteName
-}
-
-// CompressedTestSuiteName returns compressedTestSuiteName.
-func (t TestFixture) CompressedTestSuiteName() string {
-	return t.compressedTestSuiteName
-}
-
-// BucketName returns bucketName.
-func (t TestFixture) BucketName() string {
-	return t.bucketName
-}
-
-// BucketRootDir returns bucketRootDir.
-func (t TestFixture) BucketRootDir() string {
-	return t.bucketRootDir
-}
-
-// TargetUtil returns TargetUtil.
-func (t TestFixture) TargetUtil() int {
-	return t.targetUtil
-}
-
-// Timeout returns Timeout.
-func (t TestFixture) Timeout() int {
-	return t.timeout
-}
-
-// CfnStackName returns cfnStackName.
-func (t TestFixture) CfnStackName() string {
-	return t.cfnStackName
-}
-
-// FinalResultFilename returns finalResultFilename.
-func (t TestFixture) FinalResultFilename() string {
-	return t.finalResultFilename
-}
-
-// UserConfigFilename returns userConfigFilename.
-func (t TestFixture) UserConfigFilename() string {
-	return t.userConfigFilename
-}
-
-// CfnTemplateFilename returns cfnTemplateFilename.
-func (t TestFixture) CfnTemplateFilename() string {
-	return t.cfnTemplateFilename
-}
-
-// AmiId returns AmiId.
-func (t TestFixture) AmiId() string {
-	return t.amiId
-}
 
 // SetUserConfig sets empty fields of UserConfig to reqConfig
 func (UserConfig) SetUserConfig(reqConfig UserConfig) {

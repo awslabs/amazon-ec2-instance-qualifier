@@ -11,7 +11,6 @@ ARCHITECTURE=x86_64
 BUCKET=
 TIMEOUT=0
 BUCKET_ROOT_DIR=
-TARGET_UTIL=0
 REGION=
 
 adduser qualifier
@@ -48,5 +47,5 @@ chown -R qualifier instance-qualifier
 chmod u+s /sbin/shutdown
 sudo -i -u qualifier bash << EOF
 cd instance-qualifier/.
-./agent "$INSTANCE_TYPE" "$VCPUS_NUM" "$MEM_SIZE" "$OS_VERSION" "$ARCHITECTURE" "$BUCKET" "$TIMEOUT" "$BUCKET_ROOT_DIR" "$TARGET_UTIL" "$REGION" > m4.large.log 2>&1 &
+./agent "$INSTANCE_TYPE" "$VCPUS_NUM" "$MEM_SIZE" "$OS_VERSION" "$ARCHITECTURE" "$BUCKET" "$TIMEOUT" "$BUCKET_ROOT_DIR" "$REGION" > m4.large.log 2>&1 &
 EOF

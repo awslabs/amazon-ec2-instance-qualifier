@@ -35,7 +35,7 @@ func (itf Resources) CreateCfnStack(cfnTemplate string, vpcId string, subnetId s
 	testFixture := config.GetTestFixture()
 
 	output, err := itf.CloudFormation.CreateStack(&cloudformation.CreateStackInput{
-		StackName:    aws.String(testFixture.CfnStackName()),
+		StackName:    aws.String(testFixture.CfnStackName),
 		TemplateBody: aws.String(cfnTemplate),
 		Capabilities: []*string{aws.String("CAPABILITY_NAMED_IAM")},
 		Parameters: []*cloudformation.Parameter{
@@ -51,7 +51,7 @@ func (itf Resources) CreateCfnStack(cfnTemplate string, vpcId string, subnetId s
 		Tags: []*cloudformation.Tag{
 			{
 				Key:   aws.String(tagKey),
-				Value: aws.String(testFixture.RunId()),
+				Value: aws.String(testFixture.RunId),
 			},
 		},
 	})
@@ -60,16 +60,17 @@ func (itf Resources) CreateCfnStack(cfnTemplate string, vpcId string, subnetId s
 	}
 
 	stackId := *output.StackId
-	log.Printf("Waiting for stack %s to be created...\n", testFixture.CfnStackName())
+	log.Printf("Waiting for stack %s to be created...\n", testFixture.CfnStackName)
 	if err := itf.CloudFormation.WaitUntilStackCreateComplete(&cloudformation.DescribeStacksInput{
 		StackName: aws.String(stackId),
 	}); err != nil {
-		fmt.Fprintf(outputStream, "CloudFormation Stack %s failed to be created. You can go to the AWS Console to check the reasons\n", testFixture.CfnStackName())
+		fmt.Fprintf(outputStream, "CloudFormation Stack %s failed to be created. Error: %v\n", testFixture.CfnStackName, err)
+		fmt.Fprintf(outputStream, "Navigate to the AWS Console for additional information\n")
 		fmt.Fprintln(outputStream, "Use the following command to delete the stack with AWS CLI:")
-		fmt.Fprintf(outputStream, "aws cloudformation delete-stack --stack-name %s\n", testFixture.CfnStackName())
+		fmt.Fprintf(outputStream, "aws cloudformation delete-stack --stack-name %s\n", testFixture.CfnStackName)
 		return err
 	}
-	fmt.Fprintf(outputStream, "Stack Created: %s\n", testFixture.CfnStackName())
+	fmt.Fprintf(outputStream, "Stack Created: %s\n", testFixture.CfnStackName)
 
 	// Do work post CloudFormation stack completion
 	if err := itf.decorateComputeResources(); err != nil {
@@ -81,7 +82,7 @@ func (itf Resources) CreateCfnStack(cfnTemplate string, vpcId string, subnetId s
 
 // DeleteCfnStack starts the async deletion of instance-qualifier CloudFormation stack.
 func (itf Resources) DeleteCfnStack() error {
-	stackName := config.GetTestFixture().CfnStackName()
+	stackName := config.GetTestFixture().CfnStackName
 
 	_, err := itf.CloudFormation.DeleteStack(&cloudformation.DeleteStackInput{
 		StackName: aws.String(stackName),
@@ -96,7 +97,7 @@ func (itf Resources) DeleteCfnStack() error {
 
 // WaitUntilCfnStackDeleteComplete waits until the stack deletion is complete.
 func (itf Resources) WaitUntilCfnStackDeleteComplete() error {
-	stackName := config.GetTestFixture().CfnStackName()
+	stackName := config.GetTestFixture().CfnStackName
 
 	log.Printf("Waiting for stack %s to be deleted...\n", stackName)
 	if err := itf.CloudFormation.WaitUntilStackDeleteComplete(&cloudformation.DescribeStacksInput{
@@ -116,7 +117,7 @@ func (itf Resources) decorateComputeResources() error {
 	testFixture := config.GetTestFixture()
 
 	output, err := itf.CloudFormation.DescribeStackResources(&cloudformation.DescribeStackResourcesInput{
-		StackName: aws.String(testFixture.CfnStackName()),
+		StackName: aws.String(testFixture.CfnStackName),
 	})
 	if err != nil {
 		return err
@@ -142,7 +143,7 @@ func (itf Resources) decorateComputeResources() error {
 	if err := itf.attachInstancesToAutoScalingGroup(asgName, instanceIds); err != nil {
 		return err
 	}
-	if err := itf.addTagsToEc2Resources(launchTemplateIds, testFixture.RunId()); err != nil {
+	if err := itf.addTagsToEc2Resources(launchTemplateIds, testFixture.RunId); err != nil {
 		return err
 	}
 

@@ -14,6 +14,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -37,7 +39,8 @@ import (
 const (
 	deleteNothing = iota
 	deleteCfnStack
-	deleteAll // delete bucket and CloudFormation stack
+	deleteAll           // delete bucket and CloudFormation stack
+	testFixtureFileName = "test-fixture.json"
 )
 
 func main() {
@@ -93,7 +96,7 @@ func main() {
 		// After the tests begin, if the CLI is interrupted, we think the user may resume the session later to grab
 		// the results, so nothing should be deleted
 		deleteState = deleteNothing
-		fmt.Printf("The execution of test suite has been kicked off on all instances. You may quit now and later run the CLI again with the bucket name flag to get the result\n")
+		log.Println("The execution of test suite has been kicked off on all instances. You may quit now and later run the CLI again with the bucket name flag to get the result")
 	} else {
 		userConfig, err = prepareForResumedRun(sess, userConfig)
 		if err != nil {
@@ -105,7 +108,17 @@ func main() {
 		terminate(sess, err)
 	}
 
-	if err := data.OutputAsTable(sess, outputStream); err != nil {
+	instances, err := svc.GetInstancesInCfnStack()
+	if err != nil {
+		terminate(sess, err)
+	}
+	testFixture := config.GetTestFixture()
+	cwResults, err := svc.GetCloudWatchData(instances, testFixture)
+	if err != nil {
+		terminate(sess, err)
+	}
+
+	if err := data.OutputAsTable(sess, outputStream, cwResults.MetricDataResults); err != nil {
 		terminate(sess, err)
 	}
 	fmt.Println("User configuration and CloudFormation template are stored in the root directory of the bucket. You may check them if you want")
@@ -133,6 +146,7 @@ func newSession(userConfig config.UserConfig) (*session.Session, error) {
 		sessOpts.Profile = profile
 	}
 	sess := session.Must(session.NewSessionWithOptions(sessOpts))
+	log.Printf("Created session with region: %s\n", *sess.Config.Region)
 	if sess.Config.Region != nil && *sess.Config.Region != "" {
 		return sess, nil
 	}
@@ -164,17 +178,26 @@ func prepareForNewRun(sess *session.Session, userConfig config.UserConfig, runId
 		return "", err
 	}
 
-	if err := config.WriteUserConfig(testFixture.UserConfigFilename()); err != nil {
+	if err := config.WriteUserConfig(testFixture.UserConfigFilename); err != nil {
 		return "", err
 	}
-	if err := uploadAndRemoveFile(sess, testFixture.BucketName(), testFixture.UserConfigFilename(), testFixture.UserConfigFilename()); err != nil {
+	if err := uploadAndRemoveFile(sess, testFixture.BucketName, testFixture.UserConfigFilename, testFixture.UserConfigFilename); err != nil {
 		return "", err
 	}
 
 	if err := setup.SetTestSuite(); err != nil {
 		return "", err
 	}
-	if err := uploadAndRemoveFile(sess, testFixture.BucketName(), testFixture.CompressedTestSuiteName(), filepath.Base(testFixture.CompressedTestSuiteName())); err != nil {
+	if err := uploadAndRemoveFile(sess, testFixture.BucketName, testFixture.CompressedTestSuiteName, filepath.Base(testFixture.CompressedTestSuiteName)); err != nil {
+		return "", err
+	}
+	// persist test fixture
+	tfByte, err := json.Marshal(testFixture)
+	if err != nil {
+		return "", err
+	}
+	tfReader := bytes.NewReader(tfByte)
+	if err := svc.UploadToS3(testFixture.BucketName, tfReader, testFixtureFileName); err != nil {
 		return "", err
 	}
 
@@ -182,10 +205,10 @@ func prepareForNewRun(sess *session.Session, userConfig config.UserConfig, runId
 	if err != nil {
 		return "", err
 	}
-	if err := ioutil.WriteFile(testFixture.CfnTemplateFilename(), []byte(cfnTemplate), 0644); err != nil {
+	if err := ioutil.WriteFile(testFixture.CfnTemplateFilename, []byte(cfnTemplate), 0644); err != nil {
 		return "", err
 	}
-	if err := uploadAndRemoveFile(sess, testFixture.BucketName(), testFixture.CfnTemplateFilename(), testFixture.CfnTemplateFilename()); err != nil {
+	if err := uploadAndRemoveFile(sess, testFixture.BucketName, testFixture.CfnTemplateFilename, testFixture.CfnTemplateFilename); err != nil {
 		return "", err
 	}
 
@@ -198,23 +221,33 @@ func prepareForResumedRun(sess *session.Session, userConfig config.UserConfig) (
 	svc := resources.New(sess)
 
 	runId := resources.RemoveBucketNamePrefix(userConfig.Bucket)
-	fmt.Printf("Test Run ID: %s\n", runId)
-	fmt.Printf("Bucket Used: %s\n", userConfig.Bucket)
-	if err := config.PopulateTestFixture(userConfig, runId); err != nil {
+	log.Printf("Test Run ID: %s\n", runId)
+	log.Printf("Bucket Used: %s\n", userConfig.Bucket)
+
+	// rehydrate test fixture
+	tfByte, err := svc.DownloadFromS3(userConfig.Bucket, testFixtureFileName)
+	if err != nil {
 		return userConfig, err
 	}
+	if tfByte == nil {
+		return userConfig, fmt.Errorf("downloaded TestFixture is nil")
+	}
+	if err := config.RestoreTestFixture(tfByte); err != nil {
+		return userConfig, err
+	}
+
 	testFixture := config.GetTestFixture()
 
-	if err := svc.DownloadFromBucket(testFixture.BucketName(), testFixture.UserConfigFilename(), testFixture.UserConfigFilename()); err != nil {
+	if err := svc.DownloadFromBucket(testFixture.BucketName, testFixture.UserConfigFilename, testFixture.UserConfigFilename); err != nil {
 		return userConfig, err
 	}
 
-	userConfig, err := config.ReadUserConfig(testFixture.UserConfigFilename())
+	userConfig, err = config.ReadUserConfig(testFixture.UserConfigFilename)
 	if err != nil {
 		return userConfig, err
 	}
 
-	if err := os.Remove(testFixture.UserConfigFilename()); err != nil {
+	if err := os.Remove(testFixture.UserConfigFilename); err != nil {
 		log.Println(err)
 	}
 

@@ -45,7 +45,7 @@ function test_interrupt_after_starting_polling() {
   aws cloudformation wait stack-delete-complete --stack-name qualifier-stack-$test_run_id >/dev/null 2>/dev/null || :
 
   result=$(cat $output_file)
-  verify_result "$INSTANCE_TYPE_USED" "$result" "target_util_99.golden" $test_type
+  verify_result "$INSTANCE_TYPE_USED" "$result" "target_util_95.golden" $test_type
   # ensure the bucket is not deleted
   if aws s3 ls | grep $bucket >/dev/null; then
     echo "✅ $test_type: bucket is still there"

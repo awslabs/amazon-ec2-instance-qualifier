@@ -56,8 +56,8 @@ func PollForResults(sess *session.Session) error {
 			return
 		}
 
-		localFinalResult := resultsDir + "/" + testFixture.FinalResultFilename()
-		remoteFinalResult := testFixture.BucketRootDir() + "/" + testFixture.FinalResultFilename()
+		localFinalResult := resultsDir + "/" + testFixture.FinalResultFilename
+		remoteFinalResult := testFixture.BucketRootDir + "/" + testFixture.FinalResultFilename
 		if err := ioutil.WriteFile(localFinalResult, []byte("[]"), 0644); err != nil {
 			errChan <- err
 			return
@@ -67,12 +67,12 @@ func PollForResults(sess *session.Session) error {
 			select {
 			case instanceResult, ok := <-results:
 				if ok {
-					if err := appendResultAndUpload(sess, testFixture.BucketName(), localFinalResult, remoteFinalResult, instanceResult); err != nil {
+					if err := appendResultAndUpload(sess, testFixture.BucketName, localFinalResult, remoteFinalResult, instanceResult); err != nil {
 						// Failing to append one instance result should not terminate the whole program
 						log.Println(err)
 					}
 				} else {
-					if err := svc.DownloadFromBucket(testFixture.BucketName(), localFinalResult, remoteFinalResult); err != nil {
+					if err := svc.DownloadFromBucket(testFixture.BucketName, localFinalResult, remoteFinalResult); err != nil {
 						// Can use the local version
 						log.Println(err)
 					}
@@ -93,11 +93,11 @@ func PollForResults(sess *session.Session) error {
 			instanceType := instance.InstanceType
 			filename := instanceId + instanceResultSuffix
 			localInstanceResult := resultsDir + "/" + filename
-			remoteInstanceResult := testFixture.BucketRootDir() + "/" + instanceType + "/" + instanceId + "/" + filename
+			remoteInstanceResult := testFixture.BucketRootDir + "/" + instanceType + "/" + instanceId + "/" + filename
 			// If the instance doesn't finish the execution of all test files before timeout, fetch this partial instance result
-			remoteFallbackInstanceResult := testFixture.BucketRootDir() + "/" + instanceType + "/" + instanceId + "/" + bucketTestsDir + "/" + filename
+			remoteFallbackInstanceResult := testFixture.BucketRootDir + "/" + instanceType + "/" + instanceId + "/" + bucketTestsDir + "/" + filename
 
-			if err := pollForResult(sess, testFixture.BucketName(), instanceId, localInstanceResult, remoteInstanceResult, remoteFallbackInstanceResult); err == nil {
+			if err := pollForResult(sess, testFixture.BucketName, instanceId, localInstanceResult, remoteInstanceResult, remoteFallbackInstanceResult); err == nil {
 				instanceResult, err := ioutil.ReadFile(localInstanceResult)
 				if err != nil {
 					// Failing to read the instance result from the file should terminate the current goroutine

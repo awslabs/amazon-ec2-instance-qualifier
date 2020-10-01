@@ -23,8 +23,8 @@ import (
 )
 
 const (
-	cpuMetric     = "cpu-load"
-	memMetric     = "mem-used"
+	cpuMetric     = "cpu_usage_active"
+	memMetric     = "mem_used_percent"
 	resultFail    = "fail"
 	statusSuccess = "SUCCESS"
 	statusFail    = "FAIL"
@@ -67,13 +67,9 @@ func parseInstanceResultToRow(instanceResult resources.Instance) (row []string, 
 
 		for _, metric := range result.Metrics {
 			if metric.MetricUsed == cpuMetric {
-				if metric.Value > maxCPU {
-					maxCPU = metric.Value
-				}
+				maxCPU = metric.Value
 			} else if metric.MetricUsed == memMetric {
-				if metric.Value > maxMem {
-					maxMem = metric.Value
-				}
+				maxMem = metric.Value
 			}
 			if metric.Value >= metric.Threshold {
 				success = false
@@ -88,17 +84,7 @@ func parseInstanceResultToRow(instanceResult resources.Instance) (row []string, 
 		row = append(row, statusFail)
 	}
 	row = append(row, fmt.Sprintf("%.3f", maxCPU))
-	vCpus, err := strconv.Atoi(instanceResult.VCpus)
-	if err != nil {
-		return nil, err
-	}
-	row = append(row, fmt.Sprintf("%.0f", maxCPU*100/float64(vCpus)))
-	row = append(row, fmt.Sprintf("%.0f", maxMem))
-	memory, err := strconv.Atoi(instanceResult.Memory)
-	if err != nil {
-		return nil, err
-	}
-	row = append(row, fmt.Sprintf("%.0f", maxMem*100/float64(memory)))
+	row = append(row, fmt.Sprintf("%.3f", maxMem))
 	if instanceResult.IsTimeout {
 		allTestsPass = false
 	}

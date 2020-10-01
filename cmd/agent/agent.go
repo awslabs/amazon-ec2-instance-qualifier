@@ -47,8 +47,7 @@ func main() {
 	bucketName := os.Args[6]
 	timeout := os.Args[7]
 	bucketRootDir := os.Args[8]
-	targetUtil := os.Args[9]
-	region := os.Args[10]
+	region := os.Args[9]
 
 	// Warm-up time for 2 purposes:
 	// 1. During booting, the CPU load is not stable, so wait for some time before starting all tests
@@ -86,10 +85,6 @@ func main() {
 			agent.Fatal(sess, agentFixture, err)
 		}
 	}()
-
-	if err := agent.PopulateThresholds(instance, targetUtil); err != nil {
-		agent.Fatal(sess, agentFixture, err)
-	}
 
 	// Upload first, in case that timeout occurs before getting any result
 	if err := marshalAndUploadToBucketTestsDir(sess, instance, agentFixture.InstanceResultFilename, agentFixture); err != nil {
