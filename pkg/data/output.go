@@ -100,17 +100,20 @@ func updateResults(results []*cloudwatch.MetricDataResult, testFixture config.Te
 				}
 				if matched {
 					instanceId = splitLabel[i]
+					break
 				}
 			}
-			metricName := splitLabel[len(splitLabel)-1] //name is always last in label
-			metricValue := *metricData.Values[0]
-			metric := resources.Metric{
-				MetricUsed: metricName,
-				Value:      metricValue,
-				Threshold:  float64(testFixture.TargetUtil),
-				Unit:       "Percent", //UserConfig
+			if instanceId != "" {
+				metricName := splitLabel[len(splitLabel)-1] //name is always last in label
+				metricValue := *metricData.Values[0]
+				metric := resources.Metric{
+					MetricUsed: metricName,
+					Value:      metricValue,
+					Threshold:  float64(testFixture.TargetUtil),
+					Unit:       "Percent", //UserConfig
+				}
+				cwMetrics[instanceId] = append(cwMetrics[instanceId], metric)
 			}
-			cwMetrics[instanceId] = append(cwMetrics[instanceId], metric)
 		}
 	}
 	fmt.Printf("cwMetrics: %v\n", cwMetrics)

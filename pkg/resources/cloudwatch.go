@@ -15,6 +15,7 @@ package resources
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 
@@ -49,7 +50,7 @@ func (itf Resources) GetCloudWatchData(instances []Instance, testFixture config.
 		MetricDataQueries: queries,
 	}
 
-	fmt.Printf("Requesting metrics with GetMetricDataInput: %v\n", input)
+	log.Printf("Requesting metrics with GetMetricDataInput: %v\n", input)
 	// CloudWatch data is not always immediately available for retrieval; therefore, best-effort retry
 	for i := 0; i < retryAttempts; i++ {
 		fmt.Printf("GetMetricData attempt: %s\n", strconv.Itoa(i))

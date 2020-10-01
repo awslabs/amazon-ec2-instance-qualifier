@@ -192,7 +192,10 @@ func prepareForNewRun(sess *session.Session, userConfig config.UserConfig, runId
 		return "", err
 	}
 	// persist test fixture
-	tfByte, _ := json.Marshal(testFixture)
+	tfByte, err := json.Marshal(testFixture)
+	if err != nil {
+		return "", err
+	}
 	tfReader := bytes.NewReader(tfByte)
 	if err := svc.UploadToS3(testFixture.BucketName, tfReader, testFixtureFileName); err != nil {
 		return "", err
