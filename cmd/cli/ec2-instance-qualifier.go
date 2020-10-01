@@ -96,7 +96,7 @@ func main() {
 		// After the tests begin, if the CLI is interrupted, we think the user may resume the session later to grab
 		// the results, so nothing should be deleted
 		deleteState = deleteNothing
-		fmt.Printf("The execution of test suite has been kicked off on all instances. You may quit now and later run the CLI again with the bucket name flag to get the result\n")
+		log.Println("The execution of test suite has been kicked off on all instances. You may quit now and later run the CLI again with the bucket name flag to get the result")
 	} else {
 		userConfig, err = prepareForResumedRun(sess, userConfig)
 		if err != nil {
@@ -146,7 +146,7 @@ func newSession(userConfig config.UserConfig) (*session.Session, error) {
 		sessOpts.Profile = profile
 	}
 	sess := session.Must(session.NewSessionWithOptions(sessOpts))
-	fmt.Printf("Created session with region: %s\n", *sess.Config.Region)
+	log.Printf("Created session with region: %s\n", *sess.Config.Region)
 	if sess.Config.Region != nil && *sess.Config.Region != "" {
 		return sess, nil
 	}
@@ -221,8 +221,8 @@ func prepareForResumedRun(sess *session.Session, userConfig config.UserConfig) (
 	svc := resources.New(sess)
 
 	runId := resources.RemoveBucketNamePrefix(userConfig.Bucket)
-	fmt.Printf("Test Run ID: %s\n", runId)
-	fmt.Printf("Bucket Used: %s\n", userConfig.Bucket)
+	log.Printf("Test Run ID: %s\n", runId)
+	log.Printf("Bucket Used: %s\n", userConfig.Bucket)
 
 	// rehydrate test fixture
 	tfByte, err := svc.DownloadFromS3(userConfig.Bucket, testFixtureFileName)

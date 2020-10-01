@@ -14,7 +14,6 @@
 package resources
 
 import (
-	"fmt"
 	"log"
 	"strconv"
 	"time"
@@ -53,14 +52,13 @@ func (itf Resources) GetCloudWatchData(instances []Instance, testFixture config.
 	log.Printf("Requesting metrics with GetMetricDataInput: %v\n", input)
 	// CloudWatch data is not always immediately available for retrieval; therefore, best-effort retry
 	for i := 0; i < retryAttempts; i++ {
-		fmt.Printf("GetMetricData attempt: %s\n", strconv.Itoa(i))
+		log.Printf("GetMetricData attempt: %s\n", strconv.Itoa(i))
 		resp, err = itf.CloudWatch.GetMetricData(input)
 		if err != nil {
-			fmt.Println("error getting metric data ", err)
-			fmt.Printf("Resp: %v\n", resp)
+			log.Println("error getting metric data ", err)
+			log.Printf("Resp: %v\n", resp)
 			return nil, err
 		}
-		fmt.Printf("Resp: %v\n", resp)
 		for _, result := range resp.MetricDataResults {
 			if result.Values == nil {
 				time.Sleep(retryPeriod * time.Minute)
@@ -68,7 +66,6 @@ func (itf Resources) GetCloudWatchData(instances []Instance, testFixture config.
 			}
 		}
 	}
-	fmt.Printf("metric data from CW: %v\n", resp)
 	return resp, nil
 }
 

@@ -15,6 +15,7 @@ package data
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"regexp"
 	"strings"
@@ -41,14 +42,14 @@ func OutputAsTable(sess *session.Session, outputStream *os.File, results []*clou
 		return err
 	}
 
-	fmt.Println("Updating local and remote results files after merging CloudWatch data...")
+	log.Println("Updating local and remote results files after merging CloudWatch data")
 	localPath := resultsDir + "/" + testFixture.FinalResultFilename
 	remotePath := testFixture.BucketRootDir + "/" + testFixture.FinalResultFilename
 	if err := cmdutil.MarshalToFile(finalResult, localPath); err != nil {
-		fmt.Printf("There was an error saving updated results locally. final result: %v\n", finalResult)
+		log.Printf("There was an error saving updated results locally. final result: %v\n", finalResult)
 	}
 	if err := svc.UploadToBucket(testFixture.BucketName, localPath, remotePath); err != nil {
-		fmt.Println("There was an error uploading updated results to S3")
+		log.Println("There was an error uploading updated results to S3")
 	}
 
 	var tableData [][]string
@@ -88,14 +89,13 @@ func OutputAsTable(sess *session.Session, outputStream *os.File, results []*clou
 func updateResults(results []*cloudwatch.MetricDataResult, testFixture config.TestFixture) ([]resources.Instance, error) {
 	cwMetrics := make(map[string][]resources.Metric)
 	for _, metricData := range results {
-		fmt.Println(*metricData.Id)
 		if metricData.Values != nil {
 			splitLabel := strings.Split(*metricData.Label, " ")
 			var instanceId string
 			for i, tag := range splitLabel {
 				matched, err := regexp.MatchString(instanceIdRegex, tag)
 				if err != nil {
-					fmt.Println("Could not extract instanceId from MetricDataResult")
+					log.Println("Could not extract instanceId from MetricDataResult")
 					return nil, err
 				}
 				if matched {
@@ -116,7 +116,6 @@ func updateResults(results []*cloudwatch.MetricDataResult, testFixture config.Te
 			}
 		}
 	}
-	fmt.Printf("cwMetrics: %v\n", cwMetrics)
 
 	finalResult, err := finalResultToArray(testFixture.FinalResultFilename)
 	if err != nil {

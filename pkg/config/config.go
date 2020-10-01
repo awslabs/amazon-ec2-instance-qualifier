@@ -19,6 +19,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -68,7 +69,7 @@ func RestoreTestFixture(data []byte) (err error) {
 	if err := json.Unmarshal(data, &testFixture); err != nil {
 		return err
 	}
-	fmt.Printf("Restored test fixture to: %v\n", testFixture)
+	log.Printf("Restored test fixture to: %v\n", testFixture)
 	return nil
 }
 
