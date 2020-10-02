@@ -1,5 +1,6 @@
 {
   "instance-types": "m4.large,m4.xlarge,c4.large,a1.large,c5a.12xlarge",
-  "target-utilization": 80,
+  "cpu-threshold": 80,
+  "mem-threshold": 10,
   "timeout": 125
 }

@@ -190,7 +190,7 @@ func TestParseCliArgsPriority(t *testing.T) {
 	h.Ok(t, err)
 
 	h.Equals(t, "INSTANCE_TYPES_Args", userConfig.InstanceTypes)                             //Args
-	h.Equals(t, 30, userConfig.CpuThreshold)												  //Args
+	h.Equals(t, 30, userConfig.CpuThreshold)                                                 //Args
 	h.Equals(t, 30, userConfig.MemThreshold)                                                 //Args
 	h.Equals(t, "../../test/static/UserConfigFiles/valid.config", userConfig.ConfigFilePath) //Args
 	h.Equals(t, "us-weast-1", userConfig.Region)                                             //Env

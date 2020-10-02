@@ -93,7 +93,7 @@ function check_decorating_operations() {
   echo "✅ $test_type: all decorating operations succeeded"
 }
 
-cmd="$AEIQ_BIN --instance-types=$INSTANCE_TYPE_USED --test-suite=$TEST_SUITE_USED --target-utilization=99 --subnet=$SUBNET_ID --custom-script=$CUSTOM_SCRIPT"
+cmd="$AEIQ_BIN --instance-types=$INSTANCE_TYPE_USED --test-suite=$TEST_SUITE_USED --cpu-threshold=99 --mem-threshold=50 --subnet=$SUBNET_ID --custom-script=$CUSTOM_SCRIPT"
 test_interrupt_before_quit_prompt
 test_interrupt_after_starting_polling
 

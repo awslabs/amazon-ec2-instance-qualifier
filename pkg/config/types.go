@@ -77,6 +77,7 @@ func (UserConfig) String() string {
 }
 
 // SetUserConfig sets empty fields of UserConfig to reqConfig
+// nolint: gocyclo
 func (UserConfig) SetUserConfig(reqConfig UserConfig) {
 	if userConfig.InstanceTypes == "" {
 		userConfig.InstanceTypes = reqConfig.InstanceTypes
