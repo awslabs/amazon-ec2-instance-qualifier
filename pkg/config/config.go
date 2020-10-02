@@ -97,8 +97,8 @@ func ParseCliArgs(outputStream *os.File) (UserConfig, error) {
 Provided with a test suite and a list of EC2 instance types, %s will then
 run the input on all designated types, test against multiple metrics, and output the results
 in a user friendly format`, binName, binName)
-		examples := fmt.Sprintf(`./%s --instance-types=m4.large,c5.large,m4.xlarge --test-suite=path/to/test-folder --target-utilization=30 --vpc=vpc-294b9542 --subnet=subnet-4879bf23 --timeout=2400
-./%s --instance-types=m4.xlarge,c1.large,c5.large --test-suite=path/to/test-folder --target-utilization=50 --profile=default
+		examples := fmt.Sprintf(`./%s --instance-types=m4.large,c5.large,m4.xlarge --test-suite=path/to/test-folder --cpu-threshold=30 --mem-threshold=30 --vpc=vpc-294b9542 --subnet=subnet-4879bf23 --timeout=2400
+./%s --instance-types=m4.xlarge,c1.large,c5.large --test-suite=path/to/test-folder --cpu-threshold=30 --mem-threshold=30 --profile=default
 ./%s --bucket=qualifier-Bucket-123456789abcdef`, binName, binName, binName)
 		fmt.Fprintf(outputStream,
 			longUsage+"\n\n"+
@@ -173,7 +173,7 @@ in a user friendly format`, binName, binName)
 	if userConfig.Timeout <= 0 {
 		return userConfig, errors.New("you must provide a timeout greater than 0")
 	}
-	fmt.Fprintf(outputStream, "UserConfig: %v\n", userConfig)
+	log.Printf("Starting Instance-Qualifier with User Config: %s\n", userConfig.String())
 	return userConfig, nil
 }
 

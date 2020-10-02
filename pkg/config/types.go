@@ -13,6 +13,8 @@
 
 package config
 
+import "fmt"
+
 // UserConfig contains configuration provided by the user, which remains unchanged throughout the entire run.
 type UserConfig struct {
 	InstanceTypes    string `json:"instance-types"`
@@ -51,6 +53,28 @@ type TestFixture struct {
 
 var testFixture TestFixture
 var userConfig UserConfig
+
+// String returns a pretty string representation of UserConfig
+func (UserConfig) String() string {
+	return fmt.Sprintf(`
+		InstanceTypes: %s,
+		TestSuiteName: %s,
+		CpuThreshold: %d,
+		MemThreshold: %d,
+		VpcId: %s,
+		SubnetId: %s,
+		AmiId: %s,
+		Timeout: %d,
+		Persist: %t,
+		Profile: %s,
+		Region: %s,
+		Bucket: %s,
+		CustomScriptPath: %s,
+		ConfigFilePath: %s
+`, userConfig.InstanceTypes, userConfig.TestSuiteName, userConfig.CpuThreshold, userConfig.MemThreshold, userConfig.VpcId,
+		userConfig.SubnetId, userConfig.AmiId, userConfig.Timeout, userConfig.Persist, userConfig.Profile, userConfig.Region,
+		userConfig.Bucket, userConfig.CustomScriptPath, userConfig.ConfigFilePath)
+}
 
 // SetUserConfig sets empty fields of UserConfig to reqConfig
 func (UserConfig) SetUserConfig(reqConfig UserConfig) {
@@ -96,4 +120,26 @@ func (UserConfig) SetUserConfig(reqConfig UserConfig) {
 	if userConfig.ConfigFilePath == "" {
 		userConfig.ConfigFilePath = reqConfig.ConfigFilePath
 	}
+}
+
+// String returns a pretty string representation of TestFixture
+func (TestFixture) String() string {
+	return fmt.Sprintf(`
+		RunId: %s,
+		TestSuiteName: %s,
+		CompressedTestSuiteName: %s,
+		BucketName: %s,
+		BucketRootDir: %s,
+		CpuThreshold: %d,
+		MemThreshold: %d,
+		Timeout: %d,
+		CfnStackName: %s,
+		FinalResultFilename: %s,
+		UserConfigFilename: %s,
+		CfnTemplateFilename: %s,
+		AmiId: %s,
+		StartTime: %s
+`, testFixture.RunId, testFixture.TestSuiteName, testFixture.CompressedTestSuiteName, testFixture.BucketName, testFixture.BucketRootDir,
+		testFixture.CpuThreshold, testFixture.MemThreshold, testFixture.Timeout, testFixture.CfnStackName, testFixture.FinalResultFilename,
+		testFixture.UserConfigFilename, testFixture.CfnTemplateFilename, testFixture.AmiId, testFixture.StartTime)
 }

@@ -88,7 +88,7 @@ func OutputAsTable(sess *session.Session, outputStream *os.File, results []*clou
 // then saves updates results file locally and remotely
 func updateResults(results []*cloudwatch.MetricDataResult, testFixture config.TestFixture) ([]resources.Instance, error) {
 	cwMetrics := make(map[string][]resources.Metric)
-	metricThresholds := map[string]int {
+	metricThresholds := map[string]int{
 		"cpu_usage_active": testFixture.CpuThreshold,
 		"mem_used_percent": testFixture.MemThreshold,
 	}
