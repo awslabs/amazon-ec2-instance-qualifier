@@ -50,6 +50,8 @@ func finalResultToArray(finalResult string) ([]resources.Instance, error) {
 func parseInstanceResultToRow(instanceResult resources.Instance) (row []string, err error) {
 	maxCPU := 0.0
 	maxMem := 0.0
+	cpuThreshold := 0.0
+	memThreshold := 0.0
 	totalExecutionTime := 0.0
 	success := true
 	allTestsPass := true
@@ -68,8 +70,10 @@ func parseInstanceResultToRow(instanceResult resources.Instance) (row []string, 
 		for _, metric := range result.Metrics {
 			if metric.MetricUsed == cpuMetric {
 				maxCPU = metric.Value
+				cpuThreshold = metric.Threshold
 			} else if metric.MetricUsed == memMetric {
 				maxMem = metric.Value
+				memThreshold = metric.Threshold
 			}
 			if metric.Value >= metric.Threshold {
 				success = false
@@ -83,13 +87,15 @@ func parseInstanceResultToRow(instanceResult resources.Instance) (row []string, 
 	} else {
 		row = append(row, statusFail)
 	}
-	row = append(row, fmt.Sprintf("%.3f", maxCPU))
-	row = append(row, fmt.Sprintf("%.3f", maxMem))
+	row = append(row, fmt.Sprintf("%.2f", maxCPU))
+	row = append(row, fmt.Sprintf("%.2f", cpuThreshold))
+	row = append(row, fmt.Sprintf("%.2f", maxMem))
+	row = append(row, fmt.Sprintf("%.2f", memThreshold))
 	if instanceResult.IsTimeout {
 		allTestsPass = false
 	}
 	row = append(row, strconv.FormatBool(allTestsPass))
-	row = append(row, fmt.Sprintf("%.3f", totalExecutionTime))
+	row = append(row, fmt.Sprintf("%.2f", totalExecutionTime))
 
 	return row, nil
 }
