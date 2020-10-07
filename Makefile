@@ -37,7 +37,7 @@ build: compile
 
 app:
 	cd ${MAKEFILE_PATH}/test/app-for-e2e/cmd; \
-	env GOOS=linux GOARCH=amd64 go build -gcflags '-N -l' -a -o ${BUILD_DIR_PATH}/${APP_BINARY_NAME} ec2-instance-qualifier-app.go
+	go build -a -o ${BUILD_DIR_PATH}/${APP_BINARY_NAME} ec2-instance-qualifier-app.go
 
 unit-test:
 	go test -bench=. ${MAKEFILE_PATH}/... -v -coverprofile=coverage_aeiq.out -covermode=atomic -outputdir=${BUILD_DIR_PATH}

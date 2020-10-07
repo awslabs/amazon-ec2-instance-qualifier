@@ -10,7 +10,6 @@ func PopulateTable(numEntries int) error {
 		randomBreed := rand.Intn(len(dogBreeds))
 		randomName := rand.Intn(len(names))
 		randomStatus := rand.Intn(len(statuses))
-		fmt.Printf("randomBreed: %d , randomName: %d  , randomStatus: %d\n", randomBreed, randomName, randomStatus)
 		entry := Pet{
 			PetId:  i,
 			Name:   names[randomName],

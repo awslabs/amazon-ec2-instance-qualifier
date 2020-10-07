@@ -63,6 +63,7 @@ func GetPetByID(petId int) (Pet, error) {
 	}
 
 	petResult.Name = string(plainName)
+	fmt.Printf("Retrieved %v\n", petResult)
 	return petResult, nil
 }
 
@@ -97,7 +98,7 @@ func AddPet(pet Pet) error {
 		return err
 	}
 
-	fmt.Println("Successfully added ", pet.Name)
+	fmt.Printf("Added %v\n", pet)
 	return nil
 }
 
@@ -121,5 +122,7 @@ func DeletePet(petId int) error {
 		fmt.Println("error calling DeleteItem: ", err.Error())
 		return err
 	}
+
+	fmt.Printf("Deleted %v\n", petId)
 	return nil
 }
