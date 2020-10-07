@@ -5,6 +5,7 @@ import (
 	"math/rand"
 )
 
+// PopulateTable populates table in bulk
 func PopulateTable(numEntries int) error {
 	for i := 1; i <= numEntries; i++ {
 		randomBreed := rand.Intn(len(dogBreeds))

@@ -15,6 +15,7 @@ import (
 
 const tableName = "Pets"
 
+// Pet is the code representation of a pet entry in the database
 type Pet struct {
 	PetId  int    `json:"PetId"`
 	Name   string `json:"Name"`
@@ -22,6 +23,7 @@ type Pet struct {
 	Status string `json:"Status"`
 }
 
+// GetPetByID looks up and returns a pet by its petId
 func GetPetByID(petId int) (Pet, error) {
 	sess := session.Must(session.NewSession(&aws.Config{
 		Region: aws.String("us-east-2"),
@@ -67,6 +69,7 @@ func GetPetByID(petId int) (Pet, error) {
 	return petResult, nil
 }
 
+// AddPet adds a pet to the table after encrypting its name
 func AddPet(pet Pet) error {
 	sess := session.Must(session.NewSession(&aws.Config{
 		Region: aws.String("us-east-2"),
@@ -102,6 +105,7 @@ func AddPet(pet Pet) error {
 	return nil
 }
 
+// DeletePet removes a pet from the table by its petId
 func DeletePet(petId int) error {
 	sess := session.Must(session.NewSession(&aws.Config{
 		Region: aws.String("us-east-2"),

@@ -8,6 +8,7 @@ import (
 	"io"
 )
 
+// SecureCryptoKey represents a super secure key for encryption
 var SecureCryptoKey = NewEncryptionKey()
 
 // NewEncryptionKey generates a random 256-bit key for Encrypt() and

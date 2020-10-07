@@ -99,6 +99,8 @@ func ListRoutesHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 // DEMO APP
+
+// MessageResponse contains any additional information required in the server response
 type MessageResponse struct {
 	Message string `json:"message"`
 }
