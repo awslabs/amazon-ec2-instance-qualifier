@@ -14,13 +14,19 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
 	"syscall"
 	"time"
+
+	db "github.com/awslabs/amazon-ec2-instance-qualifier/ec2-instance-qualifier-app/pkg/database"
 )
+
+// E2E Testing
 
 // CPULoadHandler creates 2 goroutines and waits on "endless" loop until sleep duration passes.
 // Duration is provided as a URL parameter or defaulted to 10.
@@ -57,33 +63,6 @@ func CPULoadHandler(res http.ResponseWriter, req *http.Request) {
 	log.Println("Leaving CPULoadHandler")
 }
 
-// MemLoadHandler launches X goroutines concurrently, independent of one another.
-// X is provided as a URL parameter or defaulted to 100,000.
-// A single Goroutine is ~8KB; therefore, with the default value ~800MB of memory is expected to be used.
-// ex: localhost:1738/mem?routines=120000
-func MemLoadHandler(res http.ResponseWriter, req *http.Request) {
-	log.Println("Entered MemLoadHandler")
-	flusher, ok := res.(http.Flusher)
-	if !ok {
-		http.Error(res, "Server does not support flusher", http.StatusInternalServerError)
-		return
-	}
-
-	numGoRoutines := parseOrDefault(req, "routines", 100000)
-
-	fmt.Fprintf(res, "Starting mem test with %d goroutines ۞\n", numGoRoutines)
-	flusher.Flush()
-
-	for i := 0; i < numGoRoutines; i++ {
-		go func() {
-			log.Println("goroutine-ing")
-		}()
-	}
-
-	fmt.Fprint(res, "All goroutines finished!! 🏁\n")
-	log.Println("Leaving MemLoadHandler")
-}
-
 // NewMemLoadHandler allocates X MiB physical memory and waits for 10 seconds before ending.
 // X is provided as a URL parameter or defaulted to 1,000.
 // ex: localhost:1738/newmem?mib=2000
@@ -112,15 +91,114 @@ func NewMemLoadHandler(res http.ResponseWriter, req *http.Request) {
 	log.Println("Leaving NewMemLoadHandler")
 }
 
-// ListRoutesHandler returns the valid paths on this server.
+// ListRoutesHandler returns available paths
 func ListRoutesHandler(res http.ResponseWriter, req *http.Request) {
-	log.Println("Entered ListRoutesHandler")
-	paths := []string{"cpu", "mem"}
-	for _, path := range paths {
-		fmt.Fprintln(res, path)
-	}
-	log.Println("Leaving ListRoutesHandler")
+	paths := "paths: / , cpu , newmem , pet , pupulate"
+	messageResponseJSON(res, http.StatusOK, paths)
+	return
 }
+
+// DEMO APP
+type MessageResponse struct {
+	Message string `json:"message"`
+}
+
+// PetHandler handles pets and pet accessories
+// ex: ex: localhost:1738/pet , ex: localhost:1738/pet?petId=4
+func PetHandler(res http.ResponseWriter, req *http.Request) {
+	petIdParam, _ := req.URL.Query()["petId"]
+
+	//GET
+	if req.Method == http.MethodGet {
+		if len(petIdParam) < 1 {
+			message := "Pet ID required"
+			messageResponseJSON(res, http.StatusBadRequest, message)
+			return
+		}
+		petId, err := strconv.Atoi(petIdParam[0])
+		if err != nil {
+			message := "Could not parse Pet ID; Ensure ID consists of numerics only"
+			messageResponseJSON(res, http.StatusBadRequest, message)
+			return
+		}
+		pet, err := db.GetPetByID(petId)
+		if err != nil {
+			message := "Pet not found: " + err.Error()
+			messageResponseJSON(res, http.StatusNotFound, message)
+			return
+		}
+		jsonResponse(res, http.StatusOK, pet)
+		return
+	}
+
+	//POST
+	if req.Method == http.MethodPost {
+		body, err := ioutil.ReadAll(req.Body)
+		defer req.Body.Close()
+		if err != nil {
+			message := "Invalid request; body required"
+			messageResponseJSON(res, http.StatusMethodNotAllowed, message)
+			return
+		}
+
+		var pet db.Pet
+		err = json.Unmarshal(body, &pet)
+		if err != nil {
+			fmt.Println(err)
+			message := "Invalid request; can't unmarshal"
+			messageResponseJSON(res, http.StatusMethodNotAllowed, message)
+			return
+		}
+
+		err = db.AddPet(pet)
+		if err != nil {
+			message := "Invalid request; can't add pet to DB"
+			messageResponseJSON(res, http.StatusMethodNotAllowed, message)
+			return
+		}
+		jsonResponse(res, http.StatusOK, "Pet Added")
+		return
+	}
+
+	//DELETE
+	if req.Method == http.MethodDelete {
+		if len(petIdParam) < 1 {
+			message := "Pet ID required"
+			messageResponseJSON(res, http.StatusBadRequest, message)
+			return
+		}
+		petId, err := strconv.Atoi(petIdParam[0])
+		if err != nil {
+			message := "Could not parse Pet ID; Ensure ID consists of numerics only"
+			messageResponseJSON(res, http.StatusBadRequest, message)
+			return
+		}
+		err = db.DeletePet(petId)
+		if err != nil {
+			message := "Could remove pet from DB"
+			messageResponseJSON(res, http.StatusNotFound, message)
+			return
+		}
+		jsonResponse(res, http.StatusOK, "Pet Deleted")
+		return
+	}
+}
+
+// PupulateHandler populates the Pets table with pups
+// ex: localhost:1738/pupulate?num=1000
+func PupulateHandler(res http.ResponseWriter, req *http.Request) {
+	numPups := parseOrDefault(req, "num", 100)
+	err := db.PopulateTable(numPups)
+	if err != nil {
+		message := "Could not populate Pets table"
+		messageResponseJSON(res, http.StatusBadRequest, message)
+		return
+	}
+	jsonResponse(res, http.StatusOK, "Pets table populated")
+	return
+}
+
+// Helpers
 
 // parseOrDefault takes a requestParam key and parses into an int if parsing fails, then assign to defaultValue.
 func parseOrDefault(req *http.Request, requestParam string, defaultValue int) int {
@@ -137,6 +215,26 @@ func parseOrDefault(req *http.Request, requestParam string, defaultValue int) in
 			result = intValue
 		}
 	}
-
 	return result
+}
+
+func messageResponseJSON(res http.ResponseWriter, status int, message string) {
+	res.Header().Set("Content-Type", "application/json")
+	res.WriteHeader(status)
+	msg := MessageResponse{Message: message}
+	mJSON, err := json.Marshal(msg)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Fprint(res, string(mJSON))
+}
+
+func jsonResponse(res http.ResponseWriter, status int, result interface{}) {
+	res.Header().Set("Content-Type", "application/json; charset=utf-8")
+	res.WriteHeader(status)
+	payload, err := json.Marshal(result)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Fprint(res, string(payload))
 }
