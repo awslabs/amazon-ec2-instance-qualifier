@@ -13,7 +13,9 @@
 
 package config
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // UserConfig contains configuration provided by the user, which remains unchanged throughout the entire run.
 type UserConfig struct {
@@ -31,6 +33,7 @@ type UserConfig struct {
 	Bucket           string `json:"bucket"`
 	CustomScriptPath string `json:"custom-script"`
 	ConfigFilePath   string `json:"config-file"`
+	IsDemo           bool   `json:"demo-mode"`
 }
 
 // TestFixture contains constant information for the entire run.

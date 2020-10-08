@@ -124,9 +124,16 @@ in a user friendly format`, binName, binName)
 	flag.StringVar(&userConfig.Profile, "profile", "", "[OPTIONAL] AWS CLI Profile to use for credentials and config")
 	flag.StringVar(&userConfig.Region, "region", "", "[OPTIONAL] AWS Region to use for API requests")
 	flag.StringVar(&userConfig.Bucket, "bucket", "", "[OPTIONAL] the name of the Bucket created in the last run. When provided with this flag, the CLI won't create new resources, but try to grab test results from the Bucket. If you provide this flag, you don't need to specify any required flags")
+	flag.BoolVar(&userConfig.IsDemo, "demo", false, "[OPTIONAL] set to true if you'd like the tool to execute against the demo app, app-for-e2e")
 
 	// Apply config with precedence: cli args, env vars, config file
 	flag.Parse()
+
+	if userConfig.IsDemo {
+		userConfig.SetDemoConfig()
+		return userConfig, nil
+	}
+
 	setUserConfigRegion()
 	var configFile string
 	if userConfig.ConfigFilePath != "" {

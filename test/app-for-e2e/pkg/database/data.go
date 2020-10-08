@@ -3,26 +3,74 @@ package database
 import (
 	"fmt"
 	"math/rand"
+	"runtime"
+	"sync"
 )
+
+type ranges struct {
+	startingID int //inclusive
+	endingID   int //exclusive
+}
 
 // PopulateTable populates table in bulk
 func PopulateTable(numEntries int) error {
-	for i := 1; i <= numEntries; i++ {
-		randomBreed := rand.Intn(len(dogBreeds))
-		randomName := rand.Intn(len(names))
-		randomStatus := rand.Intn(len(statuses))
-		entry := Pet{
-			PetId:  i,
-			Name:   names[randomName],
-			Breed:  dogBreeds[randomBreed],
-			Status: statuses[randomStatus],
-		}
-		err := AddPet(entry)
-		if err != nil {
-			fmt.Println("There was an error adding to Pets table: ", err.Error())
-		}
+	var wg sync.WaitGroup
+	numCpus := runtime.NumCPU()
+
+	chunkedWork := chunk(numEntries, numCpus)
+	fmt.Printf("chunkedWork: %v\n", chunkedWork)
+	if len(chunkedWork) < 1 {
+		return fmt.Errorf("there was an error distributing work")
 	}
+
+	for i := 0; i < numCpus; i++ {
+		wg.Add(1)
+		go func(idRanges ranges) {
+			defer wg.Done()
+			for j := idRanges.startingID; j < idRanges.endingID; j++ {
+				randomBreed := rand.Intn(len(dogBreeds))
+				randomName := rand.Intn(len(names))
+				randomStatus := rand.Intn(len(statuses))
+				entry := Pet{
+					PetId:  j,
+					Name:   names[randomName],
+					Breed:  dogBreeds[randomBreed],
+					Status: statuses[randomStatus],
+				}
+				err := AddPet(entry)
+				if err != nil {
+					fmt.Println("There was an error adding to Pets table: ", err.Error())
+				}
+			}
+		}(chunkedWork[i])
+	}
+	wg.Wait()
 	return nil
+}
+
+// chunk distributes work based on number of cpus
+func chunk(numEntries, numCpus int) (result []ranges) {
+	chunkSize := (numEntries + numCpus - 1) / numCpus
+	if chunkSize < 1 {
+		chunkSize = 1
+	}
+	startId := 0
+	endId := chunkSize
+
+	for itemsRemaining := numEntries; itemsRemaining > 0; itemsRemaining -= chunkSize {
+		if endId > numEntries {
+			endId = numEntries
+		}
+		idRange := ranges{
+			startingID: startId,
+			endingID:   endId,
+		}
+		result = append(result, idRange)
+		startId = endId
+		endId += chunkSize
+	}
+
+	return result
 }
 
 var dogBreeds = []string{

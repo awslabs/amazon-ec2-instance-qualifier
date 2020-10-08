@@ -2,14 +2,15 @@
 
 set -euo pipefail
 
-DEFAULT_REGION="us-east-2"
-AWS_REGION=$DEFAULT_REGION
+AWS_DEFAULT_REGION="us-east-2"
+AWS_REGION=$AWS_DEFAULT_REGION
 DB_NAME="Pets"
 SERVER_URL="http://localhost:1738"
 NAME_REGEX='^[A-Z][a-z]*'
 EXIT_CODE_TO_RETURN=0
 
 export AWS_REGION
+export AWS_DEFAULT_REGION
 
 # Health checks
 function health_check() {
@@ -42,7 +43,7 @@ function db_check() {
 
 # Tests
 function create_pets_test() {
-  num_pups=2000
+  num_pups=1000
   echo "Executing create_pets_test..."
   curl "$SERVER_URL/pupulate?num=$num_pups"
   status=$?
@@ -60,7 +61,7 @@ function create_pets_test() {
 }
 
 function get_pets_test() {
-  get_num=150
+  get_num=500
   echo "Executing get_pets_test..."
   for i in $(seq 1 $get_num); do
     pet_name=$(curl -s "$SERVER_URL/pet?petId=$i" | jq -r '.Name')
@@ -73,10 +74,10 @@ function get_pets_test() {
 }
 
 function delete_pets_test() {
-  delete_num=2000
+  delete_num=1000
   echo "Executing delete_pets_test..."
   current_pet_num=$(aws dynamodb scan --table-name $DB_NAME --select "COUNT" | jq -r '.Count')
-  for i in $(seq 1 $delete_num); do
+  for i in $(seq 0 $delete_num); do
     curl -X DELETE -s "$SERVER_URL/pet?petId=$i" >/dev/null
     status=$?
     if [[ $status -ne 0 ]]; then

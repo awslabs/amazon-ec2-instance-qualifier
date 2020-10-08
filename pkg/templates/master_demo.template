@@ -1,0 +1,216 @@
+{
+  "Description": "AWS CloudFormation template used to create and manage resources of EC2-instance-qualifier.",
+  "Parameters": {
+    "providedVpc": {
+      "Description": "VPC ID provided by the user.",
+      "Default": "NONE",
+      "Type": "String"
+    },
+    "providedSubnet": {
+      "Description": "Subnet ID provided by the user.",
+      "Default": "NONE",
+      "Type": "String"
+    }
+  },
+  "Conditions": {
+    "createNewVpcInfrastructure": {
+      "Fn::Equals": [
+        {
+          "Ref": "providedVpc"
+        },
+        "NONE"
+      ]
+    }
+  },
+  "Resources": {
+    "vpc": {
+      "Type": "AWS::EC2::VPC",
+      "Condition": "createNewVpcInfrastructure",
+      "Properties": {
+        "CidrBlock": "10.0.0.0/24"
+      }
+    },
+    "internetGateway": {
+      "Type": "AWS::EC2::InternetGateway",
+      "Condition": "createNewVpcInfrastructure",
+      "Properties": {}
+    },
+    "vpcGatewayAttachment": {
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "Condition": "createNewVpcInfrastructure",
+      "Properties": {
+        "VpcId": {
+          "Ref": "vpc"
+        },
+        "InternetGatewayId": {
+          "Ref": "internetGateway"
+        }
+      }
+    },
+    "subnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Condition": "createNewVpcInfrastructure",
+      "Properties": {
+        "CidrBlock": "10.0.0.0/24",
+        "VpcId": {
+          "Ref": "vpc"
+        },
+        "AvailabilityZone": "$availabilityZone",
+        "MapPublicIpOnLaunch": true
+      }
+    },
+    "routeTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Condition": "createNewVpcInfrastructure",
+      "Properties": {
+        "VpcId": {
+          "Ref": "vpc"
+        }
+      }
+    },
+    "route": {
+      "Type": "AWS::EC2::Route",
+      "Condition": "createNewVpcInfrastructure",
+      "DependsOn": "vpcGatewayAttachment",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "routeTable"
+        },
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": {
+          "Ref": "internetGateway"
+        }
+      }
+    },
+    "subnetRouteTableAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Condition": "createNewVpcInfrastructure",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "subnet"
+        },
+        "RouteTableId": {
+          "Ref": "routeTable"
+        }
+      }
+    },
+    "securityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Security group used by instance-qualifier.",
+        "VpcId": {
+          "Fn::If": [
+            "createNewVpcInfrastructure",
+            {
+              "Ref": "vpc"
+            },
+            {
+              "Ref": "providedVpc"
+            }
+          ]
+        }
+      }
+    },
+    "securityGroupIngress": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "securityGroup"
+        },
+        "IpProtocol": "-1",
+        "SourceSecurityGroupId": {
+          "Ref": "securityGroup"
+        }
+      }
+    },
+    "role": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "ec2.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "MaxSessionDuration": 43200,
+        "Policies": [
+          {
+            "PolicyName": "AmazonS3FullAccess",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": "s3:*",
+                  "Resource": "*"
+                }
+              ]
+            }
+          },
+          {
+            "PolicyName": "CloudWatchAgentServerPolicy",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "cloudwatch:PutMetricData",
+                    "ec2:DescribeVolumes",
+                    "ec2:DescribeTags",
+                    "logs:PutLogEvents",
+                    "logs:DescribeLogStreams",
+                    "logs:DescribeLogGroups",
+                    "logs:CreateLogStream",
+                    "logs:CreateLogGroup"
+                  ],
+                  "Resource": "*"
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "ssm:GetParameter"
+                  ],
+                  "Resource": "arn:aws:ssm:*:*:parameter/AmazonCloudWatch-*"
+                }
+              ]
+            }
+          },
+          {
+            "PolicyName": "AmazonDynamoDBFullAccess",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": "dynamodb:*",
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "instanceProfile": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {
+        "Roles": [
+          {
+            "Ref": "role"
+          }
+        ]
+      }
+    }
+  }
+}

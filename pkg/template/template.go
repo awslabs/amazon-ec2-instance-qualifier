@@ -42,6 +42,7 @@ var (
 	encodedAutoScalingGroupTemplate string
 	encodedInstanceTemplate         string
 	encodedUserData                 string
+	encodedMasterTemplateDemo       string
 )
 
 // UserScript encapsulates the data required for creating user script that will be deployed to the instance(s)
@@ -146,7 +147,12 @@ func processRawUserData(rawUserData string) string {
 
 // populateMasterTemplate populates the Master template with the correct value, and returns it.
 func populateMasterTemplate(availabilityZone string) (template string, err error) {
-	rawTemplate, err := cmdutil.DecodeBase64(encodedMasterTemplate)
+	encodedTemplate := encodedMasterTemplate
+	userConfig := config.GetUserConfig()
+	if userConfig.IsDemo {
+		encodedTemplate = encodedMasterTemplateDemo
+	}
+	rawTemplate, err := cmdutil.DecodeBase64(encodedTemplate)
 	if err != nil {
 		return "", err
 	}

@@ -15,6 +15,8 @@ import (
 
 const tableName = "Pets"
 
+var petCache = make(map[int]Pet)
+
 // Pet is the code representation of a pet entry in the database
 type Pet struct {
 	PetId  int    `json:"PetId"`
@@ -25,6 +27,10 @@ type Pet struct {
 
 // GetPetByID looks up and returns a pet by its petId
 func GetPetByID(petId int) (Pet, error) {
+	if cachedPet, ok := petCache[petId]; ok {
+		return cachedPet, nil
+	}
+
 	sess := session.Must(session.NewSession(&aws.Config{
 		Region: aws.String("us-east-2"),
 	}))
@@ -66,6 +72,7 @@ func GetPetByID(petId int) (Pet, error) {
 
 	petResult.Name = string(plainName)
 	fmt.Printf("Retrieved %v\n", petResult)
+	petCache[petId] = petResult
 	return petResult, nil
 }
 
