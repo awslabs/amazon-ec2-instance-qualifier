@@ -140,13 +140,13 @@ Test Run ID: opcfxoss0uyxym4
 Bucket Created: qualifier-bucket-opcfxoss0uyxym4
 Stack Created: qualifier-stack-opcfxoss0uyxym4
 The execution of test suite has been kicked off on all instances. You may quit now and later run the CLI again with the bucket name flag to get the result
-+---------------+---------+------------------+-----------+------------------+-----------+-----------------+----------------------------+
-| INSTANCE TYPE | STATUS  | CPU_USAGE_ACTIVE | THRESHOLD | MEM_USED_PERCENT | THRESHOLD | ALL TESTS PASS? | TOTAL EXECUTION TIME (sec) |
-+---------------+---------+------------------+-----------+------------------+-----------+-----------------+----------------------------+
-|   m4.xlarge   | SUCCESS |      50.11       |   80.00   |       1.47       |   10.00   |      true       |           130.69           |
-+---------------+---------+------------------+-----------+------------------+-----------+-----------------+----------------------------+
-|   m4.large    |  FAIL   |      100.00      |   80.00   |       1.44       |   10.00   |      true       |           130.70           |
-+---------------+---------+------------------+-----------+------------------+-----------+-----------------+----------------------------+
++---------------+---------+------------------+---------------+------------------+---------------+-----------------+----------------------------+
+| INSTANCE TYPE | STATUS  | CPU_USAGE_ACTIVE | CPU_THRESHOLD | MEM_USED_PERCENT | MEM_THRESHOLD | ALL TESTS PASS? | TOTAL EXECUTION TIME (sec) |
++---------------+---------+------------------+---------------+------------------+---------------+-----------------+----------------------------+
+|   m4.xlarge   | SUCCESS |      50.11       |     80.00     |       0.82       |     10.00     |      true       |           130.71           |
++---------------+---------+------------------+---------------+------------------+---------------+-----------------+----------------------------+
+|   m4.large    | SUCCESS |      100.00      |     80.00     |       1.44       |     10.00     |      true       |           130.70           |
++---------------+---------+------------------+---------------+------------------+---------------+-----------------+----------------------------+
 
 
 
@@ -212,11 +212,11 @@ $ ./ec2-instance-qualifier --bucket=qualifier-bucket-n3lytbolzfaq3np
 Region Used: us-east-2
 Test Run ID: n3lytbolzfaq3np
 Bucket Used: qualifier-bucket-n3lytbolzfaq3np
-+---------------+---------+------------------+-----------+------------------+-----------+-----------------+----------------------------+
-| INSTANCE TYPE | STATUS  | CPU_USAGE_ACTIVE | THRESHOLD | MEM_USED_PERCENT | THRESHOLD | ALL TESTS PASS? | TOTAL EXECUTION TIME (sec) |
-+---------------+---------+------------------+-----------+------------------+-----------+-----------------+----------------------------+
-|   m4.xlarge   | SUCCESS |      50.11       |   80.00   |       1.47       |   10.00   |      true       |           130.69           |
-+---------------+---------+------------------+-----------+------------------+-----------+-----------------+----------------------------+
++---------------+---------+------------------+---------------+------------------+---------------+-----------------+----------------------------+
+| INSTANCE TYPE | STATUS  | CPU_USAGE_ACTIVE | CPU_THRESHOLD | MEM_USED_PERCENT | MEM_THRESHOLD | ALL TESTS PASS? | TOTAL EXECUTION TIME (sec) |
++---------------+---------+------------------+---------------+------------------+---------------+-----------------+----------------------------+
+|   m4.xlarge   | SUCCESS |      50.11       |     80.00     |       0.82       |     10.00     |      true       |           130.71           |
++---------------+---------+------------------+---------------+------------------+---------------+-----------------+----------------------------+
 
 
 Detailed test results can be found in s3://qualifier-bucket-n3lytbolzfaq3np/Instance-Qualifier-Run-n3lytbolzfaq3np
@@ -233,9 +233,9 @@ The CLI is interrupted after tests began executing on instances, then resumed by
 * `INSTANCE TYPE`: instance type
 * `STATUS`: SUCCESS if max CPU and max MEM are less than their respective thresholds; FAIL otherwise
 * `CPU_USAGE_ACTIVE`: max `cpu_usage_active` recorded (p100) over the duration of instance-qualifier run
-* `THRESHOLD`: cpu threshold set by user
+* `CPU_THRESHOLD`: cpu threshold set by user
 * `MEM_USED_PERCENT`: max `mem_used_percent` recorded (p100) over the duration of instance-qualifier run
-* `THRESHOLD`: mem threshold set by user
+* `MEM_THRESHOLD`: mem threshold set by user
 * `ALL TESTS PASS?`: true if **all** tests execute successfully (without an error code); false otherwise
 * `TOTAL EXECUTION TIME`: how long it took the instance to execute all tests in seconds
 
