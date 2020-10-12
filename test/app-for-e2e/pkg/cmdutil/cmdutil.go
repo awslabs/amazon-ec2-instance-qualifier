@@ -26,4 +26,5 @@ func RegisterHandlers() {
 	http.HandleFunc("/newmem", handlers.NewMemLoadHandler)
 	http.HandleFunc("/pet", handlers.PetHandler)
 	http.HandleFunc("/pupulate", handlers.PupulateHandler)
+	http.HandleFunc("/depupulate", handlers.DepupulateHandler)
 }

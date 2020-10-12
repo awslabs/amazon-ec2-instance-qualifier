@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"strconv"
+	"math/rand"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -13,20 +13,26 @@ import (
 	"github.com/awslabs/amazon-ec2-instance-qualifier/ec2-instance-qualifier-app/pkg/crypto"
 )
 
-const tableName = "Pets"
+const (
+	tableName     = "Pets"
+	charsetString = "abcdefghijklmnopqrstuvwxyz0123456789"
+)
 
-var petCache = make(map[int]Pet)
+var (
+	petCache = make(map[string]Pet)
+	charset  = []rune(charsetString)
+)
 
 // Pet is the code representation of a pet entry in the database
 type Pet struct {
-	PetId  int    `json:"PetId"`
+	PetId  string `json:"PetId"`
 	Name   string `json:"Name"`
 	Breed  string `json:"Breed"`
 	Status string `json:"Status"`
 }
 
 // GetPetByID looks up and returns a pet by its petId
-func GetPetByID(petId int) (Pet, error) {
+func GetPetByID(petId string) (Pet, error) {
 	if cachedPet, ok := petCache[petId]; ok {
 		return cachedPet, nil
 	}
@@ -41,7 +47,7 @@ func GetPetByID(petId int) (Pet, error) {
 		TableName: aws.String(tableName),
 		Key: map[string]*dynamodb.AttributeValue{
 			"PetId": {
-				N: aws.String(strconv.Itoa(petId)),
+				S: aws.String(petId),
 			},
 		},
 	})
@@ -50,13 +56,13 @@ func GetPetByID(petId int) (Pet, error) {
 		return petResult, err
 	}
 	if result.Item == nil {
-		msg := "Could not find pet with Id " + strconv.Itoa(petId)
+		msg := "Could not find pet with Id " + petId
 		return petResult, errors.New(msg)
 	}
 
 	err = dynamodbattribute.UnmarshalMap(result.Item, &petResult)
 	if err != nil {
-		msg := "Failed to unmarshal Pet " + strconv.Itoa(petId) + " " + err.Error()
+		msg := "Failed to unmarshal Pet " + petId + " " + err.Error()
 		return petResult, errors.New(msg)
 	}
 
@@ -76,8 +82,26 @@ func GetPetByID(petId int) (Pet, error) {
 	return petResult, nil
 }
 
+// GetPetCount returns the total number of pets in the table
+func GetPetCount() (int64, error) {
+	sess := session.Must(session.NewSession(&aws.Config{
+		Region: aws.String("us-east-2"),
+	}))
+	svc := dynamodb.New(sess)
+	input := &dynamodb.ScanInput{
+		Select:    aws.String(dynamodb.SelectCount),
+		TableName: aws.String(tableName),
+	}
+	output, err := svc.Scan(input)
+	if err != nil {
+		return 0, err
+	}
+	fmt.Printf("Pets total table count: %v\n", *output.Count)
+	return *output.Count, nil
+}
+
 // AddPet adds a pet to the table after encrypting its name
-func AddPet(pet Pet) error {
+func AddPet(pet Pet) (string, error) {
 	sess := session.Must(session.NewSession(&aws.Config{
 		Region: aws.String("us-east-2"),
 	}))
@@ -87,14 +111,15 @@ func AddPet(pet Pet) error {
 	cipherName, err := crypto.Encrypt([]byte(pet.Name), crypto.SecureCryptoKey)
 	if err != nil {
 		fmt.Printf("There was an error with encryption: %s\n", err.Error())
-		return err
+		return "", err
 	}
 	pet.Name = hex.EncodeToString(cipherName)
+	pet.PetId = createPetId()
 
 	attrValue, err := dynamodbattribute.MarshalMap(pet)
 	if err != nil {
 		fmt.Println("error marshalling map: ", err.Error())
-		return err
+		return "", err
 	}
 
 	input := &dynamodb.PutItemInput{
@@ -105,15 +130,15 @@ func AddPet(pet Pet) error {
 	_, err = svc.PutItem(input)
 	if err != nil {
 		fmt.Println("error calling PutItem: ", err.Error())
-		return err
+		return "", err
 	}
 
 	fmt.Printf("Added %v\n", pet)
-	return nil
+	return pet.PetId, nil
 }
 
 // DeletePet removes a pet from the table by its petId
-func DeletePet(petId int) error {
+func DeletePet(petId string) error {
 	sess := session.Must(session.NewSession(&aws.Config{
 		Region: aws.String("us-east-2"),
 	}))
@@ -122,7 +147,7 @@ func DeletePet(petId int) error {
 	input := &dynamodb.DeleteItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
 			"PetId": {
-				N: aws.String(strconv.Itoa(petId)),
+				S: aws.String(petId),
 			},
 		},
 		TableName: aws.String(tableName),
@@ -136,4 +161,14 @@ func DeletePet(petId int) error {
 
 	fmt.Printf("Deleted %v\n", petId)
 	return nil
+}
+
+// Helpers
+
+func createPetId() string {
+	res := make([]rune, 10)
+	for i := range res {
+		res[i] = charset[rand.Intn(len(charset))]
+	}
+	return string(res)
 }

@@ -108,95 +108,109 @@ type MessageResponse struct {
 // PetHandler handles pets and pet accessories
 // ex: ex: localhost:1738/pet , ex: localhost:1738/pet?petId=4
 func PetHandler(res http.ResponseWriter, req *http.Request) {
+	switch req.Method {
+	case http.MethodGet:
+		handlePetGet(res, req)
+	case http.MethodPost:
+		handlePetPost(res, req)
+	case http.MethodDelete:
+		handlePetDelete(res, req)
+	default:
+		message := "Malformed request; unsupported http method. Supported methods: Get, Post, Delete"
+		messageResponseJSON(res, http.StatusBadRequest, message)
+	}
+}
+
+func handlePetGet(res http.ResponseWriter, req *http.Request) {
 	petIdParam, _ := req.URL.Query()["petId"]
-
-	//GET
-	if req.Method == http.MethodGet {
-		if len(petIdParam) < 1 {
-			message := "Pet ID required"
+	// if GET and no petId, then treat as a request for total table count
+	if len(petIdParam) < 1 {
+		count, err := db.GetPetCount()
+		if err != nil {
+			message := "Could not fetch total number of pets: " + err.Error()
 			messageResponseJSON(res, http.StatusBadRequest, message)
 			return
 		}
-		petId, err := strconv.Atoi(petIdParam[0])
-		if err != nil {
-			message := "Could not parse Pet ID; Ensure ID consists of numerics only"
-			messageResponseJSON(res, http.StatusBadRequest, message)
-			return
-		}
-		pet, err := db.GetPetByID(petId)
-		if err != nil {
-			message := "Pet not found: " + err.Error()
-			messageResponseJSON(res, http.StatusNotFound, message)
-			return
-		}
-		jsonResponse(res, http.StatusOK, pet)
+		messageResponseJSON(res, http.StatusOK, strconv.FormatInt(count, 10))
 		return
 	}
-
-	//POST
-	if req.Method == http.MethodPost {
-		body, err := ioutil.ReadAll(req.Body)
-		defer req.Body.Close()
-		if err != nil {
-			message := "Invalid request; body required"
-			messageResponseJSON(res, http.StatusMethodNotAllowed, message)
-			return
-		}
-
-		var pet db.Pet
-		err = json.Unmarshal(body, &pet)
-		if err != nil {
-			fmt.Println(err)
-			message := "Invalid request; can't unmarshal"
-			messageResponseJSON(res, http.StatusMethodNotAllowed, message)
-			return
-		}
-
-		err = db.AddPet(pet)
-		if err != nil {
-			message := "Invalid request; can't add pet to DB"
-			messageResponseJSON(res, http.StatusMethodNotAllowed, message)
-			return
-		}
-		jsonResponse(res, http.StatusOK, "Pet Added")
+	petId := petIdParam[0]
+	pet, err := db.GetPetByID(petId)
+	if err != nil {
+		message := "Pet not found: " + err.Error()
+		messageResponseJSON(res, http.StatusNotFound, message)
 		return
 	}
+	jsonResponse(res, http.StatusOK, pet)
+}
 
-	//DELETE
-	if req.Method == http.MethodDelete {
-		if len(petIdParam) < 1 {
-			message := "Pet ID required"
-			messageResponseJSON(res, http.StatusBadRequest, message)
-			return
-		}
-		petId, err := strconv.Atoi(petIdParam[0])
-		if err != nil {
-			message := "Could not parse Pet ID; Ensure ID consists of numerics only"
-			messageResponseJSON(res, http.StatusBadRequest, message)
-			return
-		}
-		err = db.DeletePet(petId)
-		if err != nil {
-			message := "Could remove pet from DB"
-			messageResponseJSON(res, http.StatusNotFound, message)
-			return
-		}
-		jsonResponse(res, http.StatusOK, "Pet Deleted")
+func handlePetPost(res http.ResponseWriter, req *http.Request) {
+	body, err := ioutil.ReadAll(req.Body)
+	defer req.Body.Close()
+	if err != nil {
+		message := "Invalid request; body required"
+		messageResponseJSON(res, http.StatusMethodNotAllowed, message)
 		return
 	}
+	var pet db.Pet
+	err = json.Unmarshal(body, &pet)
+	if err != nil {
+		fmt.Println(err)
+		message := "Invalid request; can't unmarshal"
+		messageResponseJSON(res, http.StatusMethodNotAllowed, message)
+		return
+	}
+	addedId, err := db.AddPet(pet)
+	if err != nil {
+		message := "Invalid request; can't add pet to DB"
+		messageResponseJSON(res, http.StatusMethodNotAllowed, message)
+		return
+	}
+	jsonResponse(res, http.StatusOK, addedId)
+}
+
+func handlePetDelete(res http.ResponseWriter, req *http.Request) {
+	petIdParam, _ := req.URL.Query()["petId"]
+	if len(petIdParam) < 1 {
+		message := "Pet ID required"
+		messageResponseJSON(res, http.StatusBadRequest, message)
+		return
+	}
+	petId := petIdParam[0]
+	err := db.DeletePet(petId)
+	if err != nil {
+		message := "Could remove pet from DB"
+		messageResponseJSON(res, http.StatusNotFound, message)
+		return
+	}
+	jsonResponse(res, http.StatusOK, "Pet Deleted")
 }
 
 // PupulateHandler populates the Pets table with pups
 // ex: localhost:1738/pupulate?num=1000
 func PupulateHandler(res http.ResponseWriter, req *http.Request) {
 	numPups := parseOrDefault(req, "num", 100)
-	err := db.PopulateTable(numPups)
+	pupsAdded, err := db.PopulateTable(numPups)
 	if err != nil {
 		message := "Could not populate Pets table"
 		messageResponseJSON(res, http.StatusBadRequest, message)
 		return
 	}
-	jsonResponse(res, http.StatusOK, "Pets table populated")
+	jsonResponse(res, http.StatusOK, pupsAdded)
+	return
+}
+
+// DepupulateHandler deletes a number of pups from the Pets table
+// ex: localhost:1738/depupulate?num=1000
+func DepupulateHandler(res http.ResponseWriter, req *http.Request) {
+	numPups := parseOrDefault(req, "num", 100)
+	err := db.DeleteEntries(numPups)
+	if err != nil {
+		message := "Could not delete from Pets table " + err.Error()
+		messageResponseJSON(res, http.StatusBadRequest, message)
+		return
+	}
+	jsonResponse(res, http.StatusOK, "Entries from pets table deleted")
 	return
 }
 
