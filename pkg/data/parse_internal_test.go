@@ -85,7 +85,7 @@ func deepCopy(src resources.Instance, t *testing.T) (dest resources.Instance) {
 
 func TestParseInstanceResultToRow_StatusSuccess_AllPass(t *testing.T) {
 	instanceResult := deepCopy(globalInstanceResult, t)
-	expected := []string{"m4.large", "SUCCESS", "10.523", "37.770", "true", "130.754"}
+	expected := []string{"m4.large", "SUCCESS", "10.52", "40.00", "37.77", "40.00", "true", "130.75"}
 
 	actual, err := parseInstanceResultToRow(instanceResult)
 	h.Ok(t, err)
@@ -95,7 +95,7 @@ func TestParseInstanceResultToRow_StatusSuccess_AllPass(t *testing.T) {
 func TestParseInstanceResultToRow_StatusFail_AllPass(t *testing.T) {
 	instanceResult := deepCopy(globalInstanceResult, t)
 	instanceResult.Results[1].Metrics[0].Value = 41.623
-	expected := []string{"m4.large", "FAIL", "41.623", "37.770", "true", "130.754"}
+	expected := []string{"m4.large", "FAIL", "41.62", "40.00", "37.77", "40.00", "true", "130.75"}
 
 	actual, err := parseInstanceResultToRow(instanceResult)
 	h.Ok(t, err)
@@ -105,7 +105,7 @@ func TestParseInstanceResultToRow_StatusFail_AllPass(t *testing.T) {
 func TestParseInstanceResultToRow_StatusSuccess_NotAllPass(t *testing.T) {
 	instanceResult := deepCopy(globalInstanceResult, t)
 	instanceResult.Results[1].Status = "fail"
-	expected := []string{"m4.large", "SUCCESS", "10.523", "37.770", "false", "130.754"}
+	expected := []string{"m4.large", "SUCCESS", "10.52", "40.00", "37.77", "40.00", "false", "130.75"}
 
 	actual, err := parseInstanceResultToRow(instanceResult)
 	h.Ok(t, err)
@@ -116,7 +116,7 @@ func TestParseInstanceResultToRow_StatusFail_Timeout(t *testing.T) {
 	instanceResult := deepCopy(globalInstanceResult, t)
 	instanceResult.Results[1].Metrics[1].Value = 45.456
 	instanceResult.IsTimeout = true
-	expected := []string{"m4.large", "FAIL", "10.523", "45.456", "false", "130.754"}
+	expected := []string{"m4.large", "FAIL", "10.52", "40.00", "45.46", "40.00", "false", "130.75"}
 
 	actual, err := parseInstanceResultToRow(instanceResult)
 	h.Ok(t, err)

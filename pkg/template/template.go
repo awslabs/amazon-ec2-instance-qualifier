@@ -46,7 +46,7 @@ var (
 
 // UserScript encapsulates the data required for creating user script that will be deployed to the instance(s)
 type UserScript struct {
-	InstanceType, VCpus, Memory, Os, Architecture, BucketName, Timeout, BucketRootDir, TargetUtil, CompressedTestSuiteName, TestSuiteName, CustomScript, Region string
+	InstanceType, VCpus, Memory, Os, Architecture, BucketName, Timeout, BucketRootDir, CompressedTestSuiteName, TestSuiteName, CustomScript, Region string
 }
 
 // GenerateCfnTemplate returns the CloudFormation template used to create resources for instance-qualifier.
@@ -288,7 +288,6 @@ func populateUserData(instance resources.Instance) string {
 		BucketName:              testFixture.BucketName,
 		Timeout:                 fmt.Sprint(testFixture.Timeout),
 		BucketRootDir:           testFixture.BucketRootDir,
-		TargetUtil:              fmt.Sprint(testFixture.TargetUtil),
 		CompressedTestSuiteName: compressedTestSuiteName,
 		TestSuiteName:           testSuiteName,
 		CustomScript:            string(customScript),

@@ -22,11 +22,9 @@ APP_BUCKET="ec2-instance-qualifier-app"
 APP_BIN=$SCRIPTPATH/../../build/ec2-instance-qualifier-app
 
 # acceptable +/- ranges when comparing results for identical runs
-MAX_CPU_RANGE=1.0
-MAX_MEM_RANGE=50
-MAX_CPU_PERCENT_RANGE=16
-MAX_MEM_PERCENT_RANGE=2
-EXECUTION_TIME_RANGE=0.5
+MAX_CPU_RANGE=2.0
+MAX_MEM_RANGE=2.0
+EXECUTION_TIME_RANGE=1.0
 
 # ================================================================================================
 # ================================ Region-Specific Variables =====================================
@@ -148,14 +146,14 @@ function verify_result() {
 
     actual_status=$(echo "$actual_row" | awk '{print $2}')
     actual_max_cpu=$(echo "$actual_row" | awk '{print $3}')
-    actual_max_mem=$(echo "$actual_row" | awk '{print $4}')
-    actual_pass=$(echo "$actual_row" | awk '{print $5}')
-    actual_execution_time=$(echo "$actual_row" | awk '{print $6}')
+    actual_max_mem=$(echo "$actual_row" | awk '{print $5}')
+    actual_pass=$(echo "$actual_row" | awk '{print $7}')
+    actual_execution_time=$(echo "$actual_row" | awk '{print $8}')
     expected_status=$(echo "$expected_row" | awk '{print $2}')
     expected_max_cpu=$(echo "$expected_row" | awk '{print $3}')
-    expected_max_mem=$(echo "$expected_row" | awk '{print $4}')
-    expected_pass=$(echo "$expected_row" | awk '{print $5}')
-    expected_execution_time=$(echo "$expected_row" | awk '{print $6}')
+    expected_max_mem=$(echo "$expected_row" | awk '{print $5}')
+    expected_pass=$(echo "$expected_row" | awk '{print $7}')
+    expected_execution_time=$(echo "$expected_row" | awk '{print $8}')
 
     assert_value "$actual_status" "$expected_status" "$test_type::$instance_type::status"
     assert_value_within_range "$actual_max_cpu" "$expected_max_cpu" "$MAX_CPU_RANGE" "$test_type::$instance_type::max_cpu"

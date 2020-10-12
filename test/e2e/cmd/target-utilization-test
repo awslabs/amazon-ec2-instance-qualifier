@@ -19,7 +19,7 @@ function test() {
   is_resources_deleted "$result" $test_type
 }
 
-test "$AEIQ_BIN --instance-types=$SUPPORTED_INSTANCE_TYPES --test-suite=${TEST_SUITE}_no_optional_flags --target-utilization=95 --custom-script=$CUSTOM_SCRIPT" "$SUPPORTED_INSTANCE_TYPES" "no_optional_flags" "target_util_95.golden" & pids+=($!)
+test "$AEIQ_BIN --instance-types=$SUPPORTED_INSTANCE_TYPES --test-suite=${TEST_SUITE}_no_optional_flags --cpu-threshold=95 --mem-threshold=30 --custom-script=$CUSTOM_SCRIPT" "$SUPPORTED_INSTANCE_TYPES" "no_optional_flags" "target_util_95.golden" & pids+=($!)
 sleep 1
 test "$AEIQ_BIN --config-file=$CONFIG_FILE --test-suite=${TEST_SUITE}_timeout_with_unsupported_instance_types --subnet=$SUBNET_ID --custom-script=$CUSTOM_SCRIPT" "$ALL_INSTANCE_TYPES" "timeout_with_unsupported_instance_types" "target_util_80_timeout.golden" & pids+=($!)
 

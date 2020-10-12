@@ -70,7 +70,7 @@ export AWS_SECRET_ACCESS_KEY="..."
 If you already have an AWS CLI profile setup, you can pass that directly into ec2-instance-qualifier:
 
 ```
-$ ./ec2-instance-qualifier --instance-types=m4.large --test-suite=test-folder --target-utilization=30 --profile=my-aws-cli-profile --region=us-east-1
+$ ./ec2-instance-qualifier --instance-types=m4.large --test-suite=test-folder --cpu-threshold=30 --mem-threshold=30 --profile=my-aws-cli-profile --region=us-east-1
 ```
 
 You can set the `AWS_REGION` environment variable if you don't want to pass in `--region` on each run.
@@ -96,9 +96,9 @@ Usage:
   ec2-instance-qualifier [flags]
 
 Examples:
-./ec2-instance-qualifier --instance-types=m4.large,c5.large,m4.xlarge --test-suite=path/to/test-folder --target-utilization=30 --vpc=vpc-294b9542 --subnet=subnet-4879bf23 --timeout=2400
-./ec2-instance-qualifier --instance-types=m4.xlarge,c1.large,c5.large --test-suite=path/to/test-folder --target-utilization=50 --profile=default
-./ec2-instance-qualifier --bucket=qualifier-bucket-123456789abcdef
+./ec2-instance-qualifier --instance-types=m4.large,c5.large,m4.xlarge --test-suite=path/to/test-folder --cpu-threshold=30 --mem-threshold=30 --vpc=vpc-294b9542 --subnet=subnet-4879bf23 --timeout=2400
+./ec2-instance-qualifier --instance-types=m4.xlarge,c1.large,c5.large --test-suite=path/to/test-folder --cpu-threshold=30 --mem-threshold=30 --profile=default
+./ec2-instance-qualifier --bucket=qualifier-Bucket-123456789abcdef
 
 Flags:
   -ami string
@@ -107,10 +107,14 @@ Flags:
         [OPTIONAL] the name of the Bucket created in the last run. When provided with this flag, the CLI won't create new resources, but try to grab test results from the Bucket. If you provide this flag, you don't need to specify any required flags
   -config-file string
         [OPTIONAL] path to config file for cli input parameters in JSON
+  -cpu-threshold int
+        [REQUIRED] % cpu utilization that should not be exceeded measured by cpu_usage_active. ex: 30 means instances using 30% or less CPU SUCCEED
   -custom-script string
         [OPTIONAL] path to Bash script to be executed on instance-types BEFORE agent runs test-suite and monitoring
   -instance-types string
         [REQUIRED] comma-separated list of instance-types to test
+  -mem-threshold int
+        [REQUIRED] % of memory used that should not be exceeded measured by mem_used_percent. ex: 30 means instances using 30% or less MEM SUCCEED
   -persist
         [OPTIONAL] set to true if you'd like the tool to keep the CloudFormation stack after the run. Default is deleting the stack
   -profile string
@@ -119,8 +123,6 @@ Flags:
         [OPTIONAL] AWS Region to use for API requests
   -subnet string
         [OPTIONAL] subnet id
-  -target-utilization int
-        [REQUIRED] % of total resource used (CPU, Mem) benchmark (must be an integer). ex: 30 means instances using less than 30% CPU and Mem SUCCEED
   -test-suite string
         [REQUIRED] folder containing test files to execute
   -timeout int
@@ -129,22 +131,23 @@ Flags:
         [OPTIONAL] vpc id
 ```
 
-**Example 1: Test against m4.large and m4.xlarge with a target utilization of 80% in an existing VPC and subnet** *(logs not included in output below)*
+**Example 1: Test against m4.large and m4.xlarge with cpu and memory thresholds of 80% and 30%, respectively in an existing VPC and subnet** *(logs not included in output below)*
 
 ```
-$ ./ec2-instance-qualifier --instance-types=m4.large,m4.xlarge --test-suite=test-folder --target-utilization=80 --timeout=3600 --vpc=vpc-294b9542 --subnet=subnet-4879bf23
+$ ./ec2-instance-qualifier --instance-types=m4.large,m4.xlarge --test-suite=test-folder --cpu-threshold=80 --mem-threshold=30 --timeout=3600 --vpc=vpc-294b9542 --subnet=subnet-4879bf23
 Region Used: us-east-2
 Test Run ID: opcfxoss0uyxym4
 Bucket Created: qualifier-bucket-opcfxoss0uyxym4
 Stack Created: qualifier-stack-opcfxoss0uyxym4
 The execution of test suite has been kicked off on all instances. You may quit now and later run the CLI again with the bucket name flag to get the result
-+---------------+---------------------------+-------------------------+--------------------------+-----------------+----------------------------+
-| INSTANCE TYPE | MEETS TARGET UTILIZATION? | CPU_USAGE_ACTIVE (p100) |  MEM_USED_PERCENT (p100) | ALL TESTS PASS? | TOTAL EXECUTION TIME (sec) |
-+---------------+---------------------------+-------------------------+--------------------------+-----------------+----------------------------+
-|   m4.large    |           FAIL            |         100.000         |          1.409           |      true       |          130.731           |
-+---------------+---------------------------+-------------------------+--------------------------+-----------------+----------------------------+
-|   m4.xlarge   |          SUCCESS          |         50.117          |          1.468           |      true       |          130.697           |
-+---------------+---------------------------+-------------------------+--------------------------+-----------------+----------------------------+
++---------------+---------+------------------+---------------+------------------+---------------+-----------------+----------------------------+
+| INSTANCE TYPE | STATUS  | CPU_USAGE_ACTIVE | CPU_THRESHOLD | MEM_USED_PERCENT | MEM_THRESHOLD | ALL TESTS PASS? | TOTAL EXECUTION TIME (sec) |
++---------------+---------+------------------+---------------+------------------+---------------+-----------------+----------------------------+
+|   m4.xlarge   | SUCCESS |      50.11       |     80.00     |       0.82       |     10.00     |      true       |           130.71           |
++---------------+---------+------------------+---------------+------------------+---------------+-----------------+----------------------------+
+|   m4.large    | SUCCESS |      100.00      |     80.00     |       1.44       |     10.00     |      true       |           130.70           |
++---------------+---------+------------------+---------------+------------------+---------------+-----------------+----------------------------+
+
 
 
 Detailed test results can be found in s3://qualifier-bucket-opcfxoss0uyxym4/Instance-Qualifier-Run-opcfxoss0uyxym4
@@ -153,7 +156,7 @@ The process of cleaning up stack resources has started. You can quit now
 Completed!
 ```
 
-A unique ID is assigned to each test run and the bucket and stack names also contain the ID. From the results, we know that all instances ran the whole test suite successfully, but only m4.xlarge succeeded to meet the target utilization requirement.
+A unique ID is assigned to each test run and the bucket and stack names also contain the ID. From the results, we know that all instances ran the whole test suite successfully, but only m4.xlarge succeeded to operate below both cpu and memory thresholds.
 
 
 
@@ -164,7 +167,8 @@ $ cat iq-config.json
 {
 	"instance-types": "m4.large,m4.xlarge",
 	"test-suite": "test-folder",
-	"target-utilization": 80,
+	"cpu-threshold": 80,
+	"mem-threshold": 10,
 	"vpc": "vpc-294b9542",
 	"subnet": "subnet-4879bf23",
 	"ami": "",
@@ -185,7 +189,7 @@ $ ./ec2-instance-qualifier --config-file=iq-config.json
 **Example 3: Prompt due to an instance-type not supporting AMI**
 
 ```
-$ ./ec2-instance-qualifier --instance-types=m4.xlarge,a1.large --test-suite=test-folder --target-utilization=95
+$ ./ec2-instance-qualifier --instance-types=m4.xlarge,a1.large --test-suite=test-folder --cpu-threshold=95 --mem-threshold=30
 Region Used: us-east-2
 Test Run ID: n3lytbolzfaq3np
 Bucket Created: qualifier-bucket-n3lytbolzfaq3np
@@ -208,11 +212,12 @@ $ ./ec2-instance-qualifier --bucket=qualifier-bucket-n3lytbolzfaq3np
 Region Used: us-east-2
 Test Run ID: n3lytbolzfaq3np
 Bucket Used: qualifier-bucket-n3lytbolzfaq3np
-+---------------+---------------------------+-------------------------+--------------------------+-----------------+----------------------------+
-| INSTANCE TYPE | MEETS TARGET UTILIZATION? | CPU_USAGE_ACTIVE (p100) |  MEM_USED_PERCENT (p100) | ALL TESTS PASS? | TOTAL EXECUTION TIME (sec) |
-+---------------+---------------------------+-------------------------+--------------------------+-----------------+----------------------------+
-|   m4.xlarge   |          SUCCESS          |         50.117          |          1.468           |      true       |          130.697           |
-+---------------+---------------------------+-------------------------+--------------------------+-----------------+----------------------------+
++---------------+---------+------------------+---------------+------------------+---------------+-----------------+----------------------------+
+| INSTANCE TYPE | STATUS  | CPU_USAGE_ACTIVE | CPU_THRESHOLD | MEM_USED_PERCENT | MEM_THRESHOLD | ALL TESTS PASS? | TOTAL EXECUTION TIME (sec) |
++---------------+---------+------------------+---------------+------------------+---------------+-----------------+----------------------------+
+|   m4.xlarge   | SUCCESS |      50.11       |     80.00     |       0.82       |     10.00     |      true       |           130.71           |
++---------------+---------+------------------+---------------+------------------+---------------+-----------------+----------------------------+
+
 
 Detailed test results can be found in s3://qualifier-bucket-n3lytbolzfaq3np/Instance-Qualifier-Run-n3lytbolzfaq3np
 User configuration and CloudFormation template are stored in the root directory of the bucket. You may check them if you want
@@ -226,9 +231,11 @@ The CLI is interrupted after tests began executing on instances, then resumed by
 ### Table Headers
 
 * `INSTANCE TYPE`: instance type
-* `MEETS TARGET UTILIZATION?`: SUCCESS if max CPU and max MEM are less than target utilization; FAIL otherwise
+* `STATUS`: SUCCESS if max CPU and max MEM are less than their respective thresholds; FAIL otherwise
 * `CPU_USAGE_ACTIVE`: max `cpu_usage_active` recorded (p100) over the duration of instance-qualifier run
+* `CPU_THRESHOLD`: cpu threshold set by user
 * `MEM_USED_PERCENT`: max `mem_used_percent` recorded (p100) over the duration of instance-qualifier run
+* `MEM_THRESHOLD`: mem threshold set by user
 * `ALL TESTS PASS?`: true if **all** tests execute successfully (without an error code); false otherwise
 * `TOTAL EXECUTION TIME`: how long it took the instance to execute all tests in seconds
 

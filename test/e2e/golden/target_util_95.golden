@@ -1,3 +1,3 @@
-m4.xlarge   SUCCESS 49.297   0.809   true   130.701
-m4.large    FAIL    100.000  1.458   true   130.730
-c4.large    FAIL    99.258   2.800   true   130.652
+m4.xlarge   SUCCESS 49.30   95.00   0.81   30.00   true   130.70
+m4.large    FAIL    100.00  95.00   2.00   30.00   true   130.73
+c4.large    FAIL    99.26   95.00   2.80   30.00   true   130.65

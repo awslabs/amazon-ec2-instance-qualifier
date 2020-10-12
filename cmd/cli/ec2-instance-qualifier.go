@@ -104,6 +104,9 @@ func main() {
 		}
 	}
 
+	testFixture := config.GetTestFixture()
+	log.Printf("Executing Instance-Qualifier run with the following configuration: %s\n: ", testFixture.String())
+
 	if err := data.PollForResults(sess); err != nil {
 		terminate(sess, err)
 	}
@@ -112,7 +115,7 @@ func main() {
 	if err != nil {
 		terminate(sess, err)
 	}
-	testFixture := config.GetTestFixture()
+
 	cwResults, err := svc.GetCloudWatchData(instances, testFixture)
 	if err != nil {
 		terminate(sess, err)

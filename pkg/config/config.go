@@ -57,7 +57,8 @@ func PopulateTestFixture(userConfig UserConfig, runId string, amiId ...string) (
 		return err
 	}
 	testFixture.CompressedTestSuiteName = testFixture.TestSuiteName + compressSuffix
-	testFixture.TargetUtil = userConfig.TargetUtil
+	testFixture.CpuThreshold = userConfig.CpuThreshold
+	testFixture.MemThreshold = userConfig.MemThreshold
 	testFixture.Timeout = userConfig.Timeout
 	testFixture.StartTime = time.Now().Format(time.RFC3339)
 
@@ -96,8 +97,8 @@ func ParseCliArgs(outputStream *os.File) (UserConfig, error) {
 Provided with a test suite and a list of EC2 instance types, %s will then
 run the input on all designated types, test against multiple metrics, and output the results
 in a user friendly format`, binName, binName)
-		examples := fmt.Sprintf(`./%s --instance-types=m4.large,c5.large,m4.xlarge --test-suite=path/to/test-folder --target-utilization=30 --vpc=vpc-294b9542 --subnet=subnet-4879bf23 --timeout=2400
-./%s --instance-types=m4.xlarge,c1.large,c5.large --test-suite=path/to/test-folder --target-utilization=50 --profile=default
+		examples := fmt.Sprintf(`./%s --instance-types=m4.large,c5.large,m4.xlarge --test-suite=path/to/test-folder --cpu-threshold=30 --mem-threshold=30 --vpc=vpc-294b9542 --subnet=subnet-4879bf23 --timeout=2400
+./%s --instance-types=m4.xlarge,c1.large,c5.large --test-suite=path/to/test-folder --cpu-threshold=30 --mem-threshold=30 --profile=default
 ./%s --bucket=qualifier-Bucket-123456789abcdef`, binName, binName, binName)
 		fmt.Fprintf(outputStream,
 			longUsage+"\n\n"+
@@ -111,7 +112,8 @@ in a user friendly format`, binName, binName)
 
 	flag.StringVar(&userConfig.InstanceTypes, "instance-types", "", "[REQUIRED] comma-separated list of instance-types to test")
 	flag.StringVar(&userConfig.TestSuiteName, "test-suite", "", "[REQUIRED] folder containing test files to execute")
-	flag.IntVar(&userConfig.TargetUtil, "target-utilization", 0, "[REQUIRED] % of total resource used (CPU, Mem) benchmark (must be an integer). ex: 30 means instances using less than 30% CPU and Mem SUCCEED")
+	flag.IntVar(&userConfig.CpuThreshold, "cpu-threshold", 0, "[REQUIRED] % cpu utilization that should not be exceeded measured by cpu_usage_active. ex: 30 means instances using 30% or less CPU SUCCEED")
+	flag.IntVar(&userConfig.MemThreshold, "mem-threshold", 0, "[REQUIRED] % of memory used that should not be exceeded measured by mem_used_percent. ex: 30 means instances using 30% or less MEM SUCCEED")
 	flag.StringVar(&userConfig.ConfigFilePath, "config-file", "", "[OPTIONAL] path to config file for cli input parameters in JSON")
 	flag.StringVar(&userConfig.CustomScriptPath, "custom-script", "", "[OPTIONAL] path to Bash script to be executed on instance-types BEFORE agent runs test-suite and monitoring")
 	flag.StringVar(&userConfig.VpcId, "vpc", "", "[OPTIONAL] vpc id")
@@ -158,8 +160,11 @@ in a user friendly format`, binName, binName)
 		if userConfig.InstanceTypes == "" {
 			return userConfig, errors.New("you must provide a comma-separated list of instance-types")
 		}
-		if userConfig.TargetUtil <= 0 {
-			return userConfig, errors.New("you must provide a target-utilization greater than 0")
+		if userConfig.CpuThreshold <= 0 {
+			return userConfig, errors.New("you must provide a cpu-threshold greater than 0")
+		}
+		if userConfig.MemThreshold <= 0 {
+			return userConfig, errors.New("you must provide a mem-threshold greater than 0")
 		}
 		if userConfig.TestSuiteName == "" {
 			return userConfig, errors.New("you must provide a folder containing test files to execute")
@@ -168,7 +173,7 @@ in a user friendly format`, binName, binName)
 	if userConfig.Timeout <= 0 {
 		return userConfig, errors.New("you must provide a timeout greater than 0")
 	}
-	fmt.Fprintf(outputStream, "UserConfig: %v\n", userConfig)
+	log.Printf("Starting Instance-Qualifier with User Config: %s\n", userConfig.String())
 	return userConfig, nil
 }
 

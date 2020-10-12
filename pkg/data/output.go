@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	finalOutputTableHeader = "INSTANCE TYPE,MEETS TARGET UTILIZATION?,CPU_USAGE_ACTIVE (p100), MEM_USED_PERCENT (p100),ALL TESTS PASS?,TOTAL EXECUTION TIME (sec)"
+	finalOutputTableHeader = "INSTANCE TYPE,STATUS,CPU_USAGE_ACTIVE,CPU_THRESHOLD,MEM_USED_PERCENT,MEM_THRESHOLD,ALL TESTS PASS?,TOTAL EXECUTION TIME (sec)"
 	notApplicable          = "N/A"
 	instanceIdRegex        = "i-[0-9a-z]{17}"
 )
@@ -88,6 +88,10 @@ func OutputAsTable(sess *session.Session, outputStream *os.File, results []*clou
 // then saves updates results file locally and remotely
 func updateResults(results []*cloudwatch.MetricDataResult, testFixture config.TestFixture) ([]resources.Instance, error) {
 	cwMetrics := make(map[string][]resources.Metric)
+	metricThresholds := map[string]int{
+		"cpu_usage_active": testFixture.CpuThreshold,
+		"mem_used_percent": testFixture.MemThreshold,
+	}
 	for _, metricData := range results {
 		if metricData.Values != nil {
 			splitLabel := strings.Split(*metricData.Label, " ")
@@ -106,10 +110,11 @@ func updateResults(results []*cloudwatch.MetricDataResult, testFixture config.Te
 			if instanceId != "" {
 				metricName := splitLabel[len(splitLabel)-1] //name is always last in label
 				metricValue := *metricData.Values[0]
+				thresholdValue := metricThresholds[metricName]
 				metric := resources.Metric{
 					MetricUsed: metricName,
 					Value:      metricValue,
-					Threshold:  float64(testFixture.TargetUtil),
+					Threshold:  float64(thresholdValue),
 					Unit:       "Percent", //UserConfig
 				}
 				cwMetrics[instanceId] = append(cwMetrics[instanceId], metric)

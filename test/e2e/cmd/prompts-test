@@ -30,12 +30,12 @@ function test_answer_no() {
 }
 
 # since the execution paths of answering yes to invalid vpc and invalid subnet are almost the same, here only test invalid vpc
-test_answer_yes "$AEIQ_BIN --instance-types=$SUPPORTED_INSTANCE_TYPES --test-suite=$TEST_SUITE_USED --target-utilization=50 --vpc=vpc-123456789 --custom-script=$CUSTOM_SCRIPT" "answer_yes_to_invalid_vpc"
-test_answer_yes "$AEIQ_BIN --instance-types=$SUPPORTED_INSTANCE_TYPES --test-suite=$TEST_SUITE_USED --target-utilization=99 --subnet=$SUBNET_ID --ami=ami-123456789 --custom-script=$CUSTOM_SCRIPT" "answer_yes_to_invalid_ami"
+test_answer_yes "$AEIQ_BIN --instance-types=$SUPPORTED_INSTANCE_TYPES --test-suite=$TEST_SUITE_USED --cpu-threshold=50 --mem-threshold=50 --vpc=vpc-123456789 --custom-script=$CUSTOM_SCRIPT" "answer_yes_to_invalid_vpc"
+test_answer_yes "$AEIQ_BIN --instance-types=$SUPPORTED_INSTANCE_TYPES --test-suite=$TEST_SUITE_USED --cpu-threshold=99 --mem-threshold=50 --subnet=$SUBNET_ID --ami=ami-123456789 --custom-script=$CUSTOM_SCRIPT" "answer_yes_to_invalid_ami"
 
-test_answer_no "$AEIQ_BIN --instance-types=$SUPPORTED_INSTANCE_TYPES --test-suite=$TEST_SUITE_USED --target-utilization=50 --vpc=vpc-123456789 --custom-script=$CUSTOM_SCRIPT" "answer_no_to_invalid_vpc"
-test_answer_no "$AEIQ_BIN --instance-types=$SUPPORTED_INSTANCE_TYPES --test-suite=$TEST_SUITE_USED --target-utilization=50 --subnet=subnet-123456789 --custom-script=$CUSTOM_SCRIPT" "answer_no_to_invalid_subnet"
-test_answer_no "$AEIQ_BIN --instance-types=$SUPPORTED_INSTANCE_TYPES --test-suite=$TEST_SUITE_USED --target-utilization=99 --subnet=$SUBNET_ID --ami=ami-123456789 --custom-script=$CUSTOM_SCRIPT" "answer_no_to_invalid_ami"
-test_answer_no "$AEIQ_BIN --instance-types=$ALL_INSTANCE_TYPES --test-suite=$TEST_SUITE_USED --target-utilization=50 --subnet=$SUBNET_ID --custom-script=$CUSTOM_SCRIPT" "answer_no_to_unsupported_instance_types"
+test_answer_no "$AEIQ_BIN --instance-types=$SUPPORTED_INSTANCE_TYPES --test-suite=$TEST_SUITE_USED --cpu-threshold=50 --mem-threshold=50 --vpc=vpc-123456789 --custom-script=$CUSTOM_SCRIPT" "answer_no_to_invalid_vpc"
+test_answer_no "$AEIQ_BIN --instance-types=$SUPPORTED_INSTANCE_TYPES --test-suite=$TEST_SUITE_USED --cpu-threshold=50 --mem-threshold=50 --subnet=subnet-123456789 --custom-script=$CUSTOM_SCRIPT" "answer_no_to_invalid_subnet"
+test_answer_no "$AEIQ_BIN --instance-types=$SUPPORTED_INSTANCE_TYPES --test-suite=$TEST_SUITE_USED --cpu-threshold=99 --mem-threshold=50 --subnet=$SUBNET_ID --ami=ami-123456789 --custom-script=$CUSTOM_SCRIPT" "answer_no_to_invalid_ami"
+test_answer_no "$AEIQ_BIN --instance-types=$ALL_INSTANCE_TYPES --test-suite=$TEST_SUITE_USED --cpu-threshold=50 --mem-threshold=50 --subnet=$SUBNET_ID --custom-script=$CUSTOM_SCRIPT" "answer_no_to_unsupported_instance_types"
 
 exit $EXIT_CODE_TO_RETURN
