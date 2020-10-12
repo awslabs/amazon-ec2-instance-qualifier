@@ -93,7 +93,7 @@ func NewMemLoadHandler(res http.ResponseWriter, req *http.Request) {
 
 // ListRoutesHandler returns available paths
 func ListRoutesHandler(res http.ResponseWriter, req *http.Request) {
-	paths := "paths: / , cpu , newmem , pet , pupulate"
+	paths := "paths: / , cpu , newmem , pet , pupulate , depupulate"
 	messageResponseJSON(res, http.StatusOK, paths)
 	return
 }
@@ -155,7 +155,7 @@ func handlePetPost(res http.ResponseWriter, req *http.Request) {
 	var pet db.Pet
 	err = json.Unmarshal(body, &pet)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		message := "Invalid request; can't unmarshal"
 		messageResponseJSON(res, http.StatusMethodNotAllowed, message)
 		return
@@ -240,7 +240,7 @@ func messageResponseJSON(res http.ResponseWriter, status int, message string) {
 	msg := MessageResponse{Message: message}
 	mJSON, err := json.Marshal(msg)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 	fmt.Fprint(res, string(mJSON))
 }
@@ -250,7 +250,7 @@ func jsonResponse(res http.ResponseWriter, status int, result interface{}) {
 	res.WriteHeader(status)
 	payload, err := json.Marshal(result)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 	fmt.Fprint(res, string(payload))
 }

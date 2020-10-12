@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"runtime"
 	"sync"
@@ -43,7 +44,7 @@ func PopulateTable(numEntries int) ([]string, error) {
 				petId, err := AddPet(entry)
 				addedPets = append(addedPets, petId)
 				if err != nil {
-					fmt.Println("There was an error adding to Pets table: ", err.Error())
+					log.Println("There was an error adding to Pets table: ", err.Error())
 				}
 			}
 		}(chunkedWork[i])
@@ -73,7 +74,7 @@ func DeleteEntries(numEntries int) error {
 				petToDelete := addedPets[j]
 				err := DeletePet(petToDelete)
 				if err != nil {
-					fmt.Println("There was an error deleting entries in Pets table: ", err.Error())
+					log.Println("There was an error deleting entries in Pets table: ", err.Error())
 				}
 				mu.Lock()
 				deletedPets = append(deletedPets, petToDelete)
@@ -143,7 +144,6 @@ func difference(a, b []string) []string {
 	}
 	return diff
 }
-
 
 var dogBreeds = []string{
 	"Affenpinscher",

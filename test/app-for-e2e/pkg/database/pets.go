@@ -3,7 +3,7 @@ package database
 import (
 	"encoding/hex"
 	"errors"
-	"fmt"
+	"log"
 	"math/rand"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -14,6 +14,7 @@ import (
 )
 
 const (
+	DEFAULT_REGION = "us-east-2"
 	tableName     = "Pets"
 	charsetString = "abcdefghijklmnopqrstuvwxyz0123456789"
 )
@@ -38,7 +39,7 @@ func GetPetByID(petId string) (Pet, error) {
 	}
 
 	sess := session.Must(session.NewSession(&aws.Config{
-		Region: aws.String("us-east-2"),
+		Region: aws.String(DEFAULT_REGION),
 	}))
 	svc := dynamodb.New(sess)
 
@@ -52,7 +53,7 @@ func GetPetByID(petId string) (Pet, error) {
 		},
 	})
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return petResult, err
 	}
 	if result.Item == nil {
@@ -77,7 +78,7 @@ func GetPetByID(petId string) (Pet, error) {
 	}
 
 	petResult.Name = string(plainName)
-	fmt.Printf("Retrieved %v\n", petResult)
+	log.Printf("Retrieved %v\n", petResult)
 	petCache[petId] = petResult
 	return petResult, nil
 }
@@ -85,7 +86,7 @@ func GetPetByID(petId string) (Pet, error) {
 // GetPetCount returns the total number of pets in the table
 func GetPetCount() (int64, error) {
 	sess := session.Must(session.NewSession(&aws.Config{
-		Region: aws.String("us-east-2"),
+		Region: aws.String(DEFAULT_REGION),
 	}))
 	svc := dynamodb.New(sess)
 	input := &dynamodb.ScanInput{
@@ -96,21 +97,21 @@ func GetPetCount() (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	fmt.Printf("Pets total table count: %v\n", *output.Count)
+	log.Printf("Pets total table count: %v\n", *output.Count)
 	return *output.Count, nil
 }
 
 // AddPet adds a pet to the table after encrypting its name
 func AddPet(pet Pet) (string, error) {
 	sess := session.Must(session.NewSession(&aws.Config{
-		Region: aws.String("us-east-2"),
+		Region: aws.String(DEFAULT_REGION),
 	}))
 	svc := dynamodb.New(sess)
 
 	// encrypt dog's name for privacy
 	cipherName, err := crypto.Encrypt([]byte(pet.Name), crypto.SecureCryptoKey)
 	if err != nil {
-		fmt.Printf("There was an error with encryption: %s\n", err.Error())
+		log.Printf("There was an error with encryption: %s\n", err.Error())
 		return "", err
 	}
 	pet.Name = hex.EncodeToString(cipherName)
@@ -118,7 +119,7 @@ func AddPet(pet Pet) (string, error) {
 
 	attrValue, err := dynamodbattribute.MarshalMap(pet)
 	if err != nil {
-		fmt.Println("error marshalling map: ", err.Error())
+		log.Println("error marshalling map: ", err.Error())
 		return "", err
 	}
 
@@ -129,18 +130,18 @@ func AddPet(pet Pet) (string, error) {
 
 	_, err = svc.PutItem(input)
 	if err != nil {
-		fmt.Println("error calling PutItem: ", err.Error())
+		log.Println("error calling PutItem: ", err.Error())
 		return "", err
 	}
 
-	fmt.Printf("Added %v\n", pet)
+	log.Printf("Added %v\n", pet)
 	return pet.PetId, nil
 }
 
 // DeletePet removes a pet from the table by its petId
 func DeletePet(petId string) error {
 	sess := session.Must(session.NewSession(&aws.Config{
-		Region: aws.String("us-east-2"),
+		Region: aws.String(DEFAULT_REGION),
 	}))
 	svc := dynamodb.New(sess)
 
@@ -155,11 +156,11 @@ func DeletePet(petId string) error {
 
 	_, err := svc.DeleteItem(input)
 	if err != nil {
-		fmt.Println("error calling DeleteItem: ", err.Error())
+		log.Println("error calling DeleteItem: ", err.Error())
 		return err
 	}
 
-	fmt.Printf("Deleted %v\n", petId)
+	log.Printf("Deleted %v\n", petId)
 	return nil
 }
 
