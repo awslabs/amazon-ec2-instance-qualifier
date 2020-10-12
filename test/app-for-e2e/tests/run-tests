@@ -5,6 +5,9 @@ set -euo pipefail
 AWS_DEFAULT_REGION="us-east-2"
 AWS_REGION=$AWS_DEFAULT_REGION
 DB_NAME="Pets"
+ADD_DELETE_NUM=500
+GET_NUM=100
+PETS_ADDED=()
 SERVER_URL="http://localhost:1738"
 NAME_REGEX='^[A-Z][a-z]*'
 EXIT_CODE_TO_RETURN=0
@@ -43,51 +46,52 @@ function db_check() {
 
 # Tests
 function create_pets_test() {
-  num_pups=1000
   echo "Executing create_pets_test..."
-  curl "$SERVER_URL/pupulate?num=$num_pups"
+  PETS_ADDED=$(curl -s "$SERVER_URL/pupulate?num=$ADD_DELETE_NUM" | sed 's/[][]//g')
   status=$?
   if [[ $status -ne 0 ]]; then
     echo "❌ create_pets_test FAILS: could not populate table"
     EXIT_CODE_TO_RETURN=1
   fi
 
-  num_table_entries=$(aws dynamodb scan --table-name $DB_NAME --select "COUNT" | jq -r '.Count')
-  if [[ $num_table_entries -ne $num_pups ]]; then
-    echo "❌ create_pets_test FAILS: number of entries do not match requested population. requested: $num_pups  actual: $num_table_entries"
+  num_table_entries=$(curl -s "$SERVER_URL/pet" | jq -r '.message')
+  if [[ $num_table_entries -ne $ADD_DELETE_NUM ]]; then
+    echo "❌ create_pets_test FAILS: number of entries do not match requested population. requested: $ADD_DELETE_NUM  actual: $num_table_entries"
     EXIT_CODE_TO_RETURN=1
   fi
   echo "✅  create_pets_test SUCCEEDS"
 }
 
 function get_pets_test() {
-  get_num=500
   echo "Executing get_pets_test..."
-  for i in $(seq 1 $get_num); do
+  counter=0
+  for i in $(echo $PETS_ADDED | sed "s/,/ /g" | tr -d '"'); do
+    if [[ counter -eq $GET_NUM ]]; then
+      break
+    fi
     pet_name=$(curl -s "$SERVER_URL/pet?petId=$i" | jq -r '.Name')
     if [[ ! $pet_name =~ $NAME_REGEX ]]; then
       echo "❌ get_pets_test FAILS: pet's name did not match expected format. pet_name: $pet_name"
       EXIT_CODE_TO_RETURN=1
     fi
+    (( counter++ ))
   done
   echo "✅  get_pets_test SUCCEEDS"
 }
 
 function delete_pets_test() {
-  delete_num=1000
   echo "Executing delete_pets_test..."
-  current_pet_num=$(aws dynamodb scan --table-name $DB_NAME --select "COUNT" | jq -r '.Count')
-  for i in $(seq 0 $delete_num); do
-    curl -X DELETE -s "$SERVER_URL/pet?petId=$i" >/dev/null
-    status=$?
-    if [[ $status -ne 0 ]]; then
-      echo "❌ delete_pets_test FAILS: could not delete petId $i"
-      EXIT_CODE_TO_RETURN=1
-    fi
-  done
+  current_pet_num=$(curl -s "$SERVER_URL/pet" | jq -r '.message')
 
-  expected_pet_count="$((current_pet_num - delete_num))"
-  actual_pet_count=$(aws dynamodb scan --table-name $DB_NAME --select "COUNT" | jq -r '.Count')
+  curl -s "$SERVER_URL/depupulate?num=$ADD_DELETE_NUM"
+  status=$?
+  if [[ $status -ne 0 ]]; then
+    echo "❌ delete_pets_test FAILS: could not depopulate table"
+    EXIT_CODE_TO_RETURN=1
+  fi
+
+  expected_pet_count="$((current_pet_num - $ADD_DELETE_NUM))"
+  actual_pet_count=$(curl -s "$SERVER_URL/pet" | jq -r '.message')
   if [[ $expected_pet_count -ne $actual_pet_count ]]; then
     echo "❌ delete_pets_test FAILS: pet count after deletion does not match expected count. expected_pet_count: $expected_pet_count  actual_pet_count: $actual_pet_count"
     EXIT_CODE_TO_RETURN=1
