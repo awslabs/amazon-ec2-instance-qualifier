@@ -147,12 +147,7 @@ func processRawUserData(rawUserData string) string {
 
 // populateMasterTemplate populates the Master template with the correct value, and returns it.
 func populateMasterTemplate(availabilityZone string) (template string, err error) {
-	encodedTemplate := encodedMasterTemplate
-	userConfig := config.GetUserConfig()
-	if userConfig.IsDemo {
-		encodedTemplate = encodedMasterTemplateDemo
-	}
-	rawTemplate, err := cmdutil.DecodeBase64(encodedTemplate)
+	rawTemplate, err := cmdutil.DecodeBase64(encodedMasterTemplate)
 	if err != nil {
 		return "", err
 	}

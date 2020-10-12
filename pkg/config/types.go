@@ -33,7 +33,6 @@ type UserConfig struct {
 	Bucket           string `json:"bucket"`
 	CustomScriptPath string `json:"custom-script"`
 	ConfigFilePath   string `json:"config-file"`
-	IsDemo           bool   `json:"demo-mode"`
 }
 
 // TestFixture contains constant information for the entire run.
