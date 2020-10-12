@@ -8,14 +8,12 @@ APP_BINARY_NAME=ec2-instance-qualifier-app
 GOOS ?= $(uname | tr '[:upper:]' '[:lower:]')
 GOARCH ?= amd64
 MASTER_TEMPLATE_VAR=github.com/awslabs/amazon-ec2-instance-qualifier/pkg/template.encodedMasterTemplate
-MASTER_TEMPLATE_VAR_DEMO=github.com/awslabs/amazon-ec2-instance-qualifier/pkg/template.encodedMasterTemplateDemo
 LAUNCH_TEMPLATE_TEMPLATE_VAR=github.com/awslabs/amazon-ec2-instance-qualifier/pkg/template.encodedLaunchTemplateTemplate
 AUTO_SCALING_GROUP_TEMPLATE_VAR=github.com/awslabs/amazon-ec2-instance-qualifier/pkg/template.encodedAutoScalingGroupTemplate
 INSTANCE_TEMPLATE_VAR=github.com/awslabs/amazon-ec2-instance-qualifier/pkg/template.encodedInstanceTemplate
 USER_DATA_TEMPLATE_VAR=github.com/awslabs/amazon-ec2-instance-qualifier/pkg/template.encodedUserData
 CLOUDWATCH_AGENT_CONFIG_VAR=github.com/awslabs/amazon-ec2-instance-qualifier/pkg/setup.encodedCloudWatchAgentConfig
 ENCODED_MASTER_TEMPLATE=$(shell cat ${TEMPLATES_DIR_PATH}/master.template | base64 | tr -d '\040\011\012\015')
-ENCODED_MASTER_TEMPLATE_DEMO=$(shell cat ${TEMPLATES_DIR_PATH}/master_demo.template | base64 | tr -d '\040\011\012\015')
 ENCODED_LAUNCH_TEMPLATE_TEMPLATE=$(shell cat ${TEMPLATES_DIR_PATH}/launch-template.template | base64 | tr -d '\040\011\012\015')
 ENCODED_AUTO_SCALING_GROUP_TEMPLATE=$(shell cat ${TEMPLATES_DIR_PATH}/auto-scaling-group.template | base64 | tr -d '\040\011\012\015')
 ENCODED_INSTANCE_TEMPLATE=$(shell cat ${TEMPLATES_DIR_PATH}/instance.template | base64 | tr -d '\040\011\012\015')
@@ -33,7 +31,7 @@ clean:
 
 compile:
 	@echo ${MAKEFILE_PATH}
-	go build -tags="aeiq${GOOS}" -a -ldflags '-X "${MASTER_TEMPLATE_VAR}=${ENCODED_MASTER_TEMPLATE}" -X "${MASTER_TEMPLATE_VAR_DEMO}=${ENCODED_MASTER_TEMPLATE_DEMO}" -X "${LAUNCH_TEMPLATE_TEMPLATE_VAR}=${ENCODED_LAUNCH_TEMPLATE_TEMPLATE}" -X "${AUTO_SCALING_GROUP_TEMPLATE_VAR}=${ENCODED_AUTO_SCALING_GROUP_TEMPLATE}" -X "${INSTANCE_TEMPLATE_VAR}=${ENCODED_INSTANCE_TEMPLATE}" -X "${USER_DATA_TEMPLATE_VAR}=${ENCODED_USER_DATA_TEMPLATE}" -X "${CLOUDWATCH_AGENT_CONFIG_VAR}=${ENCODED_CLOUDWATCH_AGENT_CONFIG}"' -o ${BUILD_DIR_PATH}/${CLI_BINARY_NAME} ${MAKEFILE_PATH}/cmd/cli/ec2-instance-qualifier.go
+	go build -tags="aeiq${GOOS}" -a -ldflags '-X "${MASTER_TEMPLATE_VAR}=${ENCODED_MASTER_TEMPLATE}" -X "${LAUNCH_TEMPLATE_TEMPLATE_VAR}=${ENCODED_LAUNCH_TEMPLATE_TEMPLATE}" -X "${AUTO_SCALING_GROUP_TEMPLATE_VAR}=${ENCODED_AUTO_SCALING_GROUP_TEMPLATE}" -X "${INSTANCE_TEMPLATE_VAR}=${ENCODED_INSTANCE_TEMPLATE}" -X "${USER_DATA_TEMPLATE_VAR}=${ENCODED_USER_DATA_TEMPLATE}" -X "${CLOUDWATCH_AGENT_CONFIG_VAR}=${ENCODED_CLOUDWATCH_AGENT_CONFIG}"' -o ${BUILD_DIR_PATH}/${CLI_BINARY_NAME} ${MAKEFILE_PATH}/cmd/cli/ec2-instance-qualifier.go
 	env GOOS=linux GOARCH=amd64 go build -o ${BUILD_DIR_PATH}/${AGENT_BINARY_NAME} ${MAKEFILE_PATH}/cmd/agent/agent.go
 	cp -p ${BUILD_DIR_PATH}/${AGENT_BINARY_NAME} ${MAKEFILE_PATH}/${AGENT_BINARY_NAME}
 

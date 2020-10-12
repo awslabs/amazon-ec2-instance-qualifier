@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	DEFAULT_REGION = "us-east-2"
+	defaultRegion = "us-east-2"
 	tableName     = "Pets"
 	charsetString = "abcdefghijklmnopqrstuvwxyz0123456789"
 )
@@ -39,7 +39,7 @@ func GetPetByID(petId string) (Pet, error) {
 	}
 
 	sess := session.Must(session.NewSession(&aws.Config{
-		Region: aws.String(DEFAULT_REGION),
+		Region: aws.String(defaultRegion),
 	}))
 	svc := dynamodb.New(sess)
 
@@ -86,7 +86,7 @@ func GetPetByID(petId string) (Pet, error) {
 // GetPetCount returns the total number of pets in the table
 func GetPetCount() (int64, error) {
 	sess := session.Must(session.NewSession(&aws.Config{
-		Region: aws.String(DEFAULT_REGION),
+		Region: aws.String(defaultRegion),
 	}))
 	svc := dynamodb.New(sess)
 	input := &dynamodb.ScanInput{
@@ -104,7 +104,7 @@ func GetPetCount() (int64, error) {
 // AddPet adds a pet to the table after encrypting its name
 func AddPet(pet Pet) (string, error) {
 	sess := session.Must(session.NewSession(&aws.Config{
-		Region: aws.String(DEFAULT_REGION),
+		Region: aws.String(defaultRegion),
 	}))
 	svc := dynamodb.New(sess)
 
@@ -141,7 +141,7 @@ func AddPet(pet Pet) (string, error) {
 // DeletePet removes a pet from the table by its petId
 func DeletePet(petId string) error {
 	sess := session.Must(session.NewSession(&aws.Config{
-		Region: aws.String(DEFAULT_REGION),
+		Region: aws.String(defaultRegion),
 	}))
 	svc := dynamodb.New(sess)
 
