@@ -42,7 +42,6 @@ var (
 	encodedAutoScalingGroupTemplate string
 	encodedInstanceTemplate         string
 	encodedUserData                 string
-	encodedMasterTemplateDemo       string
 )
 
 // UserScript encapsulates the data required for creating user script that will be deployed to the instance(s)

@@ -18,9 +18,7 @@ const (
 	tableName     = "Pets"
 )
 
-var (
-	petCache = make(map[string]Pet)
-)
+var petCache = make(map[string]Pet)
 
 // Pet is the code representation of a pet entry in the database
 type Pet struct {

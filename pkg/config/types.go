@@ -13,9 +13,7 @@
 
 package config
 
-import (
-	"fmt"
-)
+import "fmt"
 
 // UserConfig contains configuration provided by the user, which remains unchanged throughout the entire run.
 type UserConfig struct {
