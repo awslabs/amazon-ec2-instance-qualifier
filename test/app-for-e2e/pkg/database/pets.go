@@ -4,24 +4,22 @@ import (
 	"encoding/hex"
 	"errors"
 	"log"
-	"math/rand"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/awslabs/amazon-ec2-instance-qualifier/ec2-instance-qualifier-app/pkg/crypto"
+	"github.com/google/uuid"
 )
 
 const (
 	defaultRegion = "us-east-2"
 	tableName     = "Pets"
-	charsetString = "abcdefghijklmnopqrstuvwxyz0123456789"
 )
 
 var (
 	petCache = make(map[string]Pet)
-	charset  = []rune(charsetString)
 )
 
 // Pet is the code representation of a pet entry in the database
@@ -115,7 +113,7 @@ func AddPet(pet Pet) (string, error) {
 		return "", err
 	}
 	pet.Name = hex.EncodeToString(cipherName)
-	pet.PetId = createPetId()
+	pet.PetId = uuid.New().String()
 
 	attrValue, err := dynamodbattribute.MarshalMap(pet)
 	if err != nil {
@@ -162,14 +160,4 @@ func DeletePet(petId string) error {
 
 	log.Printf("Deleted %v\n", petId)
 	return nil
-}
-
-// Helpers
-
-func createPetId() string {
-	res := make([]rune, 10)
-	for i := range res {
-		res[i] = charset[rand.Intn(len(charset))]
-	}
-	return string(res)
 }

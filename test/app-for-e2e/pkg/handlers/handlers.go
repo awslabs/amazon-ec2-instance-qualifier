@@ -105,6 +105,11 @@ type MessageResponse struct {
 	Message string `json:"message"`
 }
 
+const (
+	petIdParam = "petId"
+	numParam   = "num"
+)
+
 // PetHandler handles pets and pet accessories
 // ex: ex: localhost:1738/pet , ex: localhost:1738/pet?petId=4
 func PetHandler(res http.ResponseWriter, req *http.Request) {
@@ -122,9 +127,9 @@ func PetHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 func handlePetGet(res http.ResponseWriter, req *http.Request) {
-	petIdParam, _ := req.URL.Query()["petId"]
+	petIdParameter, _ := req.URL.Query()[petIdParam]
 	// if GET and no petId, then treat as a request for total table count
-	if len(petIdParam) < 1 {
+	if len(petIdParameter) < 1 {
 		count, err := db.GetPetCount()
 		if err != nil {
 			message := "Could not fetch total number of pets: " + err.Error()
@@ -134,7 +139,7 @@ func handlePetGet(res http.ResponseWriter, req *http.Request) {
 		messageResponseJSON(res, http.StatusOK, strconv.FormatInt(count, 10))
 		return
 	}
-	petId := petIdParam[0]
+	petId := petIdParameter[0]
 	pet, err := db.GetPetByID(petId)
 	if err != nil {
 		message := "Pet not found: " + err.Error()
@@ -170,13 +175,13 @@ func handlePetPost(res http.ResponseWriter, req *http.Request) {
 }
 
 func handlePetDelete(res http.ResponseWriter, req *http.Request) {
-	petIdParam, _ := req.URL.Query()["petId"]
-	if len(petIdParam) < 1 {
+	petIdParameter, _ := req.URL.Query()[petIdParam]
+	if len(petIdParameter) < 1 {
 		message := "Pet ID required"
 		messageResponseJSON(res, http.StatusBadRequest, message)
 		return
 	}
-	petId := petIdParam[0]
+	petId := petIdParameter[0]
 	err := db.DeletePet(petId)
 	if err != nil {
 		message := "Could remove pet from DB"
@@ -189,7 +194,7 @@ func handlePetDelete(res http.ResponseWriter, req *http.Request) {
 // PupulateHandler populates the Pets table with pups
 // ex: localhost:1738/pupulate?num=1000
 func PupulateHandler(res http.ResponseWriter, req *http.Request) {
-	numPups := parseOrDefault(req, "num", 100)
+	numPups := parseOrDefault(req, numParam, 100)
 	pupsAdded, err := db.PopulateTable(numPups)
 	if err != nil {
 		message := "Could not populate Pets table"
@@ -203,7 +208,7 @@ func PupulateHandler(res http.ResponseWriter, req *http.Request) {
 // DepupulateHandler deletes a number of pups from the Pets table
 // ex: localhost:1738/depupulate?num=1000
 func DepupulateHandler(res http.ResponseWriter, req *http.Request) {
-	numPups := parseOrDefault(req, "num", 100)
+	numPups := parseOrDefault(req, numParam, 100)
 	err := db.DeleteEntries(numPups)
 	if err != nil {
 		message := "Could not delete from Pets table " + err.Error()
