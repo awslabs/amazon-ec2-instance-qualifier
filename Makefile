@@ -5,6 +5,8 @@ SCRIPTS_DIR_PATH = ${MAKEFILE_PATH}/scripts
 CLI_BINARY_NAME=ec2-instance-qualifier
 AGENT_BINARY_NAME=agent
 APP_BINARY_NAME=ec2-instance-qualifier-app
+GOOS ?= $(uname | tr '[:upper:]' '[:lower:]')
+GOARCH ?= amd64
 MASTER_TEMPLATE_VAR=github.com/awslabs/amazon-ec2-instance-qualifier/pkg/template.encodedMasterTemplate
 LAUNCH_TEMPLATE_TEMPLATE_VAR=github.com/awslabs/amazon-ec2-instance-qualifier/pkg/template.encodedLaunchTemplateTemplate
 AUTO_SCALING_GROUP_TEMPLATE_VAR=github.com/awslabs/amazon-ec2-instance-qualifier/pkg/template.encodedAutoScalingGroupTemplate
@@ -29,7 +31,7 @@ clean:
 
 compile:
 	@echo ${MAKEFILE_PATH}
-	go build -a -ldflags '-X "${MASTER_TEMPLATE_VAR}=${ENCODED_MASTER_TEMPLATE}" -X "${LAUNCH_TEMPLATE_TEMPLATE_VAR}=${ENCODED_LAUNCH_TEMPLATE_TEMPLATE}" -X "${AUTO_SCALING_GROUP_TEMPLATE_VAR}=${ENCODED_AUTO_SCALING_GROUP_TEMPLATE}" -X "${INSTANCE_TEMPLATE_VAR}=${ENCODED_INSTANCE_TEMPLATE}" -X "${USER_DATA_TEMPLATE_VAR}=${ENCODED_USER_DATA_TEMPLATE}" -X "${CLOUDWATCH_AGENT_CONFIG_VAR}=${ENCODED_CLOUDWATCH_AGENT_CONFIG}"' -o ${BUILD_DIR_PATH}/${CLI_BINARY_NAME} ${MAKEFILE_PATH}/cmd/cli/ec2-instance-qualifier.go
+	go build -tags="aeiq${GOOS}" -a -ldflags '-X "${MASTER_TEMPLATE_VAR}=${ENCODED_MASTER_TEMPLATE}" -X "${LAUNCH_TEMPLATE_TEMPLATE_VAR}=${ENCODED_LAUNCH_TEMPLATE_TEMPLATE}" -X "${AUTO_SCALING_GROUP_TEMPLATE_VAR}=${ENCODED_AUTO_SCALING_GROUP_TEMPLATE}" -X "${INSTANCE_TEMPLATE_VAR}=${ENCODED_INSTANCE_TEMPLATE}" -X "${USER_DATA_TEMPLATE_VAR}=${ENCODED_USER_DATA_TEMPLATE}" -X "${CLOUDWATCH_AGENT_CONFIG_VAR}=${ENCODED_CLOUDWATCH_AGENT_CONFIG}"' -o ${BUILD_DIR_PATH}/${CLI_BINARY_NAME} ${MAKEFILE_PATH}/cmd/cli/ec2-instance-qualifier.go
 	env GOOS=linux GOARCH=amd64 go build -o ${BUILD_DIR_PATH}/${AGENT_BINARY_NAME} ${MAKEFILE_PATH}/cmd/agent/agent.go
 	cp -p ${BUILD_DIR_PATH}/${AGENT_BINARY_NAME} ${MAKEFILE_PATH}/${AGENT_BINARY_NAME}
 
@@ -37,7 +39,7 @@ build: compile
 
 app:
 	cd ${MAKEFILE_PATH}/test/app-for-e2e/cmd; \
-	env GOOS=linux GOARCH=amd64 go build -gcflags '-N -l' -a -o ${BUILD_DIR_PATH}/${APP_BINARY_NAME} ec2-instance-qualifier-app.go
+	env GOOS=linux GOARCH=amd64 go build -a -o ${BUILD_DIR_PATH}/${APP_BINARY_NAME} ec2-instance-qualifier-app.go
 
 unit-test:
 	go test -bench=. ${MAKEFILE_PATH}/... -v -coverprofile=coverage_aeiq.out -covermode=atomic -outputdir=${BUILD_DIR_PATH}

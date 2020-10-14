@@ -23,6 +23,8 @@ import (
 func RegisterHandlers() {
 	http.HandleFunc("/", handlers.ListRoutesHandler)
 	http.HandleFunc("/cpu", handlers.CPULoadHandler)
-	http.HandleFunc("/mem", handlers.MemLoadHandler)
 	http.HandleFunc("/newmem", handlers.NewMemLoadHandler)
+	http.HandleFunc("/pet", handlers.PetHandler)
+	http.HandleFunc("/pupulate", handlers.PupulateHandler)
+	http.HandleFunc("/depupulate", handlers.DepupulateHandler)
 }

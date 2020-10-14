@@ -1,0 +1,117 @@
+#! /usr/bin/env bash
+
+set -euo pipefail
+
+AWS_DEFAULT_REGION="us-east-2"
+AWS_REGION=$AWS_DEFAULT_REGION
+DB_NAME="Pets"
+ADD_DELETE_NUM=500
+GET_NUM=100
+PETS_ADDED=""
+SERVER_URL="http://localhost:1738"
+NAME_REGEX='^[A-Z][a-z]*'
+EXIT_CODE_TO_RETURN=0
+
+export AWS_REGION
+export AWS_DEFAULT_REGION
+
+# Health checks
+function health_check() {
+  sleep 1
+  while true; do
+    echo "⏳ Waiting for server..."
+    health=$(curl -s "$1" || :)
+    # server is ready if ANY response is received
+    if [[ -n $health ]]; then
+      echo "======================================================================================================"
+      echo "👍 Server ready: $1 👍"
+      echo "======================================================================================================"
+      break
+    fi
+    sleep 1
+  done
+}
+
+function db_check() {
+  sleep 1
+  echo "Verifying database exists..."
+  aws dynamodb describe-table --table-name "$1" >/dev/null
+  status=$?
+  if [[ $status -ne 0 ]]; then
+    echo "❌ Database $DB_NAME needs to be created before running tests"
+    EXIT_CODE_TO_RETURN=1
+  fi
+  echo "✅ Verified Database $DB_NAME exists"
+}
+
+# Tests
+function create_pets_test() {
+  echo "Executing create_pets_test..."
+  PETS_ADDED=$(curl -s "$SERVER_URL/pupulate?num=$ADD_DELETE_NUM" | sed 's/[][]//g')
+  status=$?
+  if [[ $status -ne 0 ]]; then
+    echo "❌ create_pets_test FAILS: could not populate table"
+    EXIT_CODE_TO_RETURN=1
+  fi
+
+  num_table_entries=$(curl -s "$SERVER_URL/pet" | jq -r '.message')
+  if [[ $num_table_entries -ne $ADD_DELETE_NUM ]]; then
+    echo "❌ create_pets_test FAILS: number of entries do not match requested population. requested: $ADD_DELETE_NUM  actual: $num_table_entries"
+    EXIT_CODE_TO_RETURN=1
+  fi
+  echo "✅  create_pets_test SUCCEEDS"
+}
+
+function get_pets_test() {
+  echo "Executing get_pets_test..."
+  counter=0
+  for i in $(echo $PETS_ADDED | sed "s/,/ /g" | tr -d '"'); do
+    if [[ counter -eq $GET_NUM ]]; then
+      break
+    fi
+    pet_name=$(curl -s "$SERVER_URL/pet?petId=$i" | jq -r '.Name')
+    if [[ ! $pet_name =~ $NAME_REGEX ]]; then
+      echo "❌ get_pets_test FAILS: pet's name did not match expected format. pet_name: $pet_name"
+      EXIT_CODE_TO_RETURN=1
+    fi
+    (( counter++ ))
+  done
+  echo "✅  get_pets_test SUCCEEDS"
+}
+
+function delete_pets_test() {
+  echo "Executing delete_pets_test..."
+  current_pet_num=$(curl -s "$SERVER_URL/pet" | jq -r '.message')
+
+  curl -s "$SERVER_URL/depupulate?num=$ADD_DELETE_NUM"
+  status=$?
+  if [[ $status -ne 0 ]]; then
+    echo "❌ delete_pets_test FAILS: could not depopulate table"
+    EXIT_CODE_TO_RETURN=1
+  fi
+
+  expected_pet_count="$((current_pet_num - $ADD_DELETE_NUM))"
+  actual_pet_count=$(curl -s "$SERVER_URL/pet" | jq -r '.message')
+  if [[ $expected_pet_count -ne $actual_pet_count ]]; then
+    echo "❌ delete_pets_test FAILS: pet count after deletion does not match expected count. expected_pet_count: $expected_pet_count  actual_pet_count: $actual_pet_count"
+    EXIT_CODE_TO_RETURN=1
+  fi
+  echo "✅  delete_pets_test SUCCEEDS"
+}
+
+echo "======================================================================================================"
+echo "🥑 Starting PetStore integration tests"
+echo "======================================================================================================"
+
+health_check $SERVER_URL
+db_check $DB_NAME
+
+create_pets_test
+get_pets_test
+delete_pets_test
+
+echo "======================================================================================================"
+echo "✅ All tests passed! ✅"
+echo "======================================================================================================"
+
+exit $EXIT_CODE_TO_RETURN
