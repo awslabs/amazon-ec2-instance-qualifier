@@ -13,7 +13,7 @@
 	<img src="https://goreportcard.com/badge/github.com/awslabs/amazon-ec2-instance-qualifier" alt="go-report-card">
 	</a>
   <a href="https://travis-ci.com/awslabs/amazon-ec2-instance-qualifier">
-	<img src="https://travis-ci.com/awslabs/amazon-ec2-instance-qualifier.svg?branch=master" alt="build-status">
+	<img src="https://travis-ci.com/awslabs/amazon-ec2-instance-qualifier.svg?branch=main" alt="build-status">
   </a>
 </p>
 
@@ -52,7 +52,7 @@ The instance qualifier is an open source command line tool that automates benchm
   * An **Auto Scaling Group**: the reason we use auto scaling group to manage all instances is that an one-time action can be scheduled to terminate all instances in the group after timeout to ensure the user is not excessively charged
   * **EC2 Instances**
 * An **S3 bucket** containing the raw data of an Instance-Qualifier run is also created; however, this artifact is persisted by default
-* A sample of this CloudFormation stack can be found [here](https://github.com/awslabs/amazon-ec2-instance-qualifier/blob/master/pkg/templates/master_sample.template) 
+* A sample of this CloudFormation stack can be found [here](https://github.com/awslabs/amazon-ec2-instance-qualifier/blob/main/pkg/templates/master_sample.template) 
 * If a fatal error occurs or the user presses Ctrl-C during the run, the CLI deletes the resources appropriately. Note that if the CLI is interrupted when the tests have begun on all instances, it thinks that the user may resume the session at a later time, thus won't delete any resources
 * No impact to any original resources or settings of the AWS account
 
